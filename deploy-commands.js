@@ -1,4 +1,3 @@
-```js
 require("dotenv").config();
 
 const fs = require("node:fs");
@@ -42,11 +41,10 @@ for (const file of commandFiles) {
     if (command.data) {
       commands.push(command.data.toJSON());
       console.log("Preparado: " + command.data.name);
-    } else {
-      console.warn(file + " no tiene data.");
     }
   } catch (error) {
-    console.error("Error cargando " + file + ":", error);
+    console.error("Error cargando " + file);
+    console.error(error);
   }
 }
 
@@ -65,28 +63,17 @@ if (!GUILD_ID) {
   process.exit(1);
 }
 
-async function deployCommands() {
-  const rest = new REST({ version: "10" }).setToken(TOKEN);
+const rest = new REST({ version: "10" }).setToken(TOKEN);
 
-  try {
-    console.log("Registrando " + commands.length + " comandos...");
-
-    await rest.put(
-      Routes.applicationGuildCommands(
-        CLIENT_ID,
-        GUILD_ID
-      ),
-      {
-        body: commands
-      }
-    );
-
-    console.log("Comandos registrados correctamente.");
-  } catch (error) {
-    console.error("Error registrando comandos:", error);
-    process.exit(1);
-  }
-}
-
-deployCommands();
-```
+rest.put(
+  Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+  { body: commands }
+)
+.then(() => {
+  console.log("Comandos registrados correctamente.");
+})
+.catch((error) => {
+  console.error("Error registrando comandos:");
+  console.error(error);
+  process.exit(1);
+});
