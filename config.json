@@ -1,0 +1,17 @@
+{
+  "guildId": "",
+  "categoryId": "",
+  "channels": {
+    "waitlists": {},
+    "results": "",
+    "highResults": "",
+    "support": "",
+    "applications": "",
+    "logs": ""
+  },
+  "roles": {
+    "tester": "",
+    "staff": "",
+    "highStaff": ""
+  }
+}
