@@ -1,3 +1,4 @@
+```js
 require("dotenv").config();
 
 const fs = require("node:fs");
@@ -24,7 +25,7 @@ const {
 } = require("discord.js");
 
 /* =========================================================
-   CONFIGURACIÓN
+   CONFIG
 ========================================================= */
 
 const TOKEN =
@@ -44,7 +45,8 @@ if (!TOKEN || !CLIENT_ID || !GUILD_ID) {
   process.exit(1);
 }
 
-const DB_FILE = path.join(__dirname, "database.json");
+const DB_FILE =
+  path.join(__dirname, "database.json");
 
 /* =========================================================
    MODALIDADES
@@ -53,31 +55,42 @@ const DB_FILE = path.join(__dirname, "database.json");
 const MODES = {
   netpot: {
     name: "NetPot",
-    emoji: "🟠"
+    emoji: "🟠",
+    color: 0xff8c00,
+    channel: "🟠・netpot-waitlist"
   },
 
   uhc: {
     name: "UHC",
-    emoji: "🧪"
+    emoji: "🧪",
+    color: 0x2ecc71,
+    channel: "🧪・uhc-waitlist"
   },
 
   sword: {
     name: "Sword",
-    emoji: "⚔️"
+    emoji: "⚔️",
+    color: 0x3498db,
+    channel: "⚔️・sword-waitlist"
   },
 
   boxpvp: {
     name: "BoxPvP",
-    emoji: "📦"
+    emoji: "📦",
+    color: 0x9b59b6,
+    channel: "📦・boxpvp-waitlist"
   },
 
   crystalpvp: {
     name: "CrystalPvP",
-    emoji: "💎"
+    emoji: "💎",
+    color: 0x00d9ff,
+    channel: "💎・crystalpvp-waitlist"
   }
 };
 
-const MODE_KEYS = Object.keys(MODES);
+const MODE_KEYS =
+  Object.keys(MODES);
 
 const TIERS = [
   "HT1",
@@ -96,7 +109,133 @@ const COOLDOWN_TIME =
   3 * 24 * 60 * 60 * 1000;
 
 /* =========================================================
-   BASE DE DATOS
+   ROLES
+========================================================= */
+
+const STAFF_ROLES = [
+  {
+    name: "👑 Owner",
+    color: 0xf1c40f,
+    hoist: true
+  },
+  {
+    name: "🛡️ Administrator",
+    color: 0xe74c3c,
+    hoist: true
+  },
+  {
+    name: "🔨 Moderator",
+    color: 0xe67e22,
+    hoist: true
+  },
+  {
+    name: "🛠️ Helper",
+    color: 0x2ecc71,
+    hoist: true
+  },
+  {
+    name: "💎 Tierlist Manager",
+    color: 0x00bfff,
+    hoist: true
+  },
+  {
+    name: "🏆 High Tester",
+    color: 0xff0000,
+    hoist: true
+  },
+  {
+    name: "🧪 Senior Tester",
+    color: 0x9b59b6,
+    hoist: true
+  },
+  {
+    name: "⚔️ Tester",
+    color: 0x3498db,
+    hoist: true
+  },
+  {
+    name: "📋 Trial Tester",
+    color: 0x1abc9c,
+    hoist: true
+  },
+  {
+    name: "🎫 Support",
+    color: 0x2ecc71,
+    hoist: true
+  },
+  {
+    name: "🧑‍💻 Developer",
+    color: 0x34495e,
+    hoist: true
+  },
+  {
+    name: "🤝 Partner",
+    color: 0xf39c12,
+    hoist: false
+  },
+  {
+    name: "📝 Staff Applicant",
+    color: 0x95a5a6,
+    hoist: false
+  }
+];
+
+const REGION_ROLES = [
+  {
+    name: "🇺🇸 North America",
+    color: 0x3498db
+  },
+  {
+    name: "🇪🇺 Europe",
+    color: 0x5865f2
+  },
+  {
+    name: "🇧🇷 South America",
+    color: 0x2ecc71
+  },
+  {
+    name: "🌏 Asia",
+    color: 0xe74c3c
+  },
+  {
+    name: "🇦🇺 Oceania",
+    color: 0x9b59b6
+  },
+  {
+    name: "🌍 Other",
+    color: 0x95a5a6
+  }
+];
+
+const PING_ROLES = [
+  {
+    name: "📢 Announcements",
+    color: 0xf1c40f
+  },
+  {
+    name: "🧪 Testing",
+    color: 0x3498db
+  },
+  {
+    name: "🏆 Results",
+    color: 0x2ecc71
+  },
+  {
+    name: "🎫 Support",
+    color: 0x9b59b6
+  },
+  {
+    name: "🎬 Media",
+    color: 0xe67e22
+  },
+  {
+    name: "🏅 Events",
+    color: 0xe74c3c
+  }
+];
+
+/* =========================================================
+   DATABASE
 ========================================================= */
 
 function defaultDatabase() {
@@ -127,22 +266,37 @@ function defaultDatabase() {
 
     tickets: [],
 
-    applications: []
+    applications: [],
+
+    testers: {
+      netpot: [],
+      uhc: [],
+      sword: [],
+      boxpvp: [],
+      crystalpvp: []
+    },
+
+    setupChannels: {}
   };
 }
 
 function loadDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      const db = defaultDatabase();
+      const database =
+        defaultDatabase();
 
       fs.writeFileSync(
         DB_FILE,
-        JSON.stringify(db, null, 2),
+        JSON.stringify(
+          database,
+          null,
+          2
+        ),
         "utf8"
       );
 
-      return db;
+      return database;
     }
 
     const raw =
@@ -151,7 +305,7 @@ function loadDB() {
         "utf8"
       );
 
-    const db =
+    const database =
       raw.trim()
         ? JSON.parse(raw)
         : defaultDatabase();
@@ -159,18 +313,36 @@ function loadDB() {
     const defaults =
       defaultDatabase();
 
-    for (const key of Object.keys(defaults)) {
-      if (db[key] === undefined) {
-        db[key] = defaults[key];
+    for (
+      const key
+      of Object.keys(defaults)
+    ) {
+      if (
+        database[key] === undefined
+      ) {
+        database[key] =
+          defaults[key];
       }
     }
 
-    for (const mode of MODE_KEYS) {
-      db.waitlists[mode] ??= [];
-      db.waitlistStatus[mode] ??= true;
+    for (
+      const mode
+      of MODE_KEYS
+    ) {
+      database.waitlists[mode] ??= [];
+      database.waitlistStatus[mode] ??= true;
+      database.testers[mode] ??= [];
     }
 
-    return db;
+    database.cooldowns ??= {};
+    database.results ??= [];
+    database.highResults ??= [];
+    database.tickets ??= [];
+    database.applications ??= [];
+    database.profiles ??= {};
+    database.setupChannels ??= {};
+
+    return database;
 
   } catch (error) {
     console.error(
@@ -182,10 +354,14 @@ function loadDB() {
   }
 }
 
-function saveDB(db) {
+function saveDB(database = db) {
   fs.writeFileSync(
     DB_FILE,
-    JSON.stringify(db, null, 2),
+    JSON.stringify(
+      database,
+      null,
+      2
+    ),
     "utf8"
   );
 }
@@ -204,96 +380,128 @@ function getModeName(mode) {
   return MODES[mode]?.name || mode;
 }
 
-function getCooldownKey(userId, mode) {
+function getCooldownKey(
+  userId,
+  mode
+) {
   return `${userId}:${mode}`;
 }
 
-function getCooldown(userId, mode) {
-  return db.cooldowns[
-    getCooldownKey(userId, mode)
-  ] || 0;
+function getCooldown(
+  userId,
+  mode
+) {
+  return (
+    db.cooldowns[
+      getCooldownKey(
+        userId,
+        mode
+      )
+    ] || 0
+  );
 }
 
-function setCooldown(userId, mode) {
+function setCooldown(
+  userId,
+  mode
+) {
   db.cooldowns[
-    getCooldownKey(userId, mode)
-  ] = Date.now() + COOLDOWN_TIME;
+    getCooldownKey(
+      userId,
+      mode
+    )
+  ] =
+    Date.now() +
+    COOLDOWN_TIME;
 
-  saveDB(db);
+  saveDB();
+}
+
+function removeCooldown(
+  userId,
+  mode
+) {
+  delete db.cooldowns[
+    getCooldownKey(
+      userId,
+      mode
+    )
+  ];
+
+  saveDB();
 }
 
 function formatRemaining(ms) {
-  if (ms <= 0) return "0 minutos";
+  if (ms <= 0) {
+    return "0 minutos";
+  }
 
-  const days = Math.floor(
-    ms / 86400000
-  );
+  const days =
+    Math.floor(
+      ms / 86400000
+    );
 
-  const hours = Math.floor(
-    (ms % 86400000) / 3600000
-  );
+  const hours =
+    Math.floor(
+      (ms % 86400000) /
+      3600000
+    );
 
-  const minutes = Math.floor(
-    (ms % 3600000) / 60000
-  );
+  const minutes =
+    Math.floor(
+      (ms % 3600000) /
+      60000
+    );
 
   const parts = [];
 
   if (days) {
-    parts.push(`${days}d`);
+    parts.push(
+      `${days}d`
+    );
   }
 
   if (hours) {
-    parts.push(`${hours}h`);
+    parts.push(
+      `${hours}h`
+    );
   }
 
   if (minutes) {
-    parts.push(`${minutes}m`);
+    parts.push(
+      `${minutes}m`
+    );
   }
 
-  return parts.join(" ");
+  return (
+    parts.join(" ") ||
+    "<1m"
+  );
 }
 
 function cleanUsername(username) {
   const cleaned =
     username
       .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "");
+      .replace(
+        /[^a-z0-9-]/g,
+        ""
+      );
 
-  return cleaned || "user";
-}
-
-function isStaff(member) {
-  if (!member) return false;
-
-  if (
-    member.permissions.has(
-      PermissionFlagsBits.Administrator
-    )
-  ) {
-    return true;
-  }
-
-  const staffRoles = [
-    "👑 Owner",
-    "🛡️ Administrator",
-    "🔨 Moderator",
-    "💎 Tierlist Manager",
-    "🏆 High Tester",
-    "🧪 Senior Tester",
-    "⚔️ Tester",
-    "📋 Trial Tester",
-    "🎫 Support",
-    "🧑‍💻 Developer"
-  ];
-
-  return member.roles.cache.some(
-    role =>
-      staffRoles.includes(role.name)
+  return (
+    cleaned ||
+    "user"
   );
 }
 
-function canManageWaitlist(member) {
+/* =========================================================
+   STAFF / TESTERS
+========================================================= */
+
+function hasRole(
+  member,
+  roleNames
+) {
   if (!member) return false;
 
   if (
@@ -304,18 +512,121 @@ function canManageWaitlist(member) {
     return true;
   }
 
-  const roles = [
-    "👑 Owner",
-    "🛡️ Administrator",
-    "🔨 Moderator",
-    "💎 Tierlist Manager",
-    "🏆 High Tester",
-    "🧪 Senior Tester",
-    "⚔️ Tester"
-  ];
-
   return member.roles.cache.some(
-    role => roles.includes(role.name)
+    role =>
+      roleNames.includes(
+        role.name
+      )
+  );
+}
+
+function isStaff(member) {
+  return hasRole(
+    member,
+    [
+      "👑 Owner",
+      "🛡️ Administrator",
+      "🔨 Moderator",
+      "🛠️ Helper",
+      "💎 Tierlist Manager",
+      "🏆 High Tester",
+      "🧪 Senior Tester",
+      "⚔️ Tester",
+      "📋 Trial Tester",
+      "🎫 Support",
+      "🧑‍💻 Developer"
+    ]
+  );
+}
+
+function canManageWaitlist(
+  member
+) {
+  return hasRole(
+    member,
+    [
+      "👑 Owner",
+      "🛡️ Administrator",
+      "💎 Tierlist Manager",
+      "🏆 High Tester",
+      "🧪 Senior Tester",
+      "⚔️ Tester"
+    ]
+  );
+}
+
+function canRemoveCooldown(
+  member
+) {
+  return hasRole(
+    member,
+    [
+      "👑 Owner",
+      "🛡️ Administrator",
+      "🔨 Moderator",
+      "🛠️ Helper",
+      "💎 Tierlist Manager",
+      "🏆 High Tester",
+      "🧪 Senior Tester",
+      "⚔️ Tester",
+      "🎫 Support",
+      "🧑‍💻 Developer"
+    ]
+  );
+}
+
+function canResult(
+  member,
+  mode
+) {
+  if (!member) {
+    return false;
+  }
+
+  if (
+    member.permissions.has(
+      PermissionFlagsBits.Administrator
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    member.roles.cache.some(
+      role =>
+        [
+          "👑 Owner",
+          "🛡️ Administrator",
+          "💎 Tierlist Manager",
+          "🏆 High Tester",
+          "🧪 Senior Tester"
+        ].includes(
+          role.name
+        )
+    )
+  ) {
+    return true;
+  }
+
+  return (
+    db.testers[mode] ||
+    []
+  ).includes(
+    member.id
+  );
+}
+
+function canHighResult(
+  member
+) {
+  return hasRole(
+    member,
+    [
+      "👑 Owner",
+      "🛡️ Administrator",
+      "💎 Tierlist Manager",
+      "🏆 High Tester"
+    ]
   );
 }
 
@@ -323,14 +634,15 @@ function canManageWaitlist(member) {
    CLIENT
 ========================================================= */
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds
-  ]
-});
+const client =
+  new Client({
+    intents: [
+      GatewayIntentBits.Guilds
+    ]
+  });
 
 /* =========================================================
-   COMANDOS
+   COMMANDS
 ========================================================= */
 
 const commands = [
@@ -344,7 +656,7 @@ const commands = [
   new SlashCommandBuilder()
     .setName("setup")
     .setDescription(
-      "Crea toda la estructura de Summer Tier List."
+      "Configura todo Summer Tier List."
     )
     .setDefaultMemberPermissions(
       PermissionFlagsBits.Administrator
@@ -353,7 +665,16 @@ const commands = [
   new SlashCommandBuilder()
     .setName("setupwaitlist")
     .setDescription(
-      "Repara y publica los paneles de waitlist."
+      "Configura las waitlists."
+    )
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator
+    ),
+
+  new SlashCommandBuilder()
+    .setName("roles")
+    .setDescription(
+      "Publica el panel de selección de roles."
     )
     .setDefaultMemberPermissions(
       PermissionFlagsBits.Administrator
@@ -372,63 +693,46 @@ const commands = [
         )
         .setRequired(true)
         .addChoices(
-          ...MODE_KEYS.map(mode => ({
-            name:
-              `${MODES[mode].emoji} ${MODES[mode].name}`,
-            value: mode
-          }))
+          ...MODE_KEYS.map(
+            mode => ({
+              name:
+                `${MODES[mode].emoji} ${MODES[mode].name}`,
+              value: mode
+            })
+          )
         )
     )
     .addStringOption(option =>
       option
         .setName("estado")
         .setDescription(
-          "Estado de la waitlist"
+          "Estado"
         )
         .setRequired(true)
         .addChoices(
           {
-            name: "🟢 Encender",
+            name:
+              "🟢 Encender",
             value: "on"
           },
           {
-            name: "🔴 Apagar",
+            name:
+              "🔴 Apagar",
             value: "off"
           }
         )
-    )
-    .setDefaultMemberPermissions(
-      PermissionFlagsBits.Administrator
     ),
 
   new SlashCommandBuilder()
-    .setName("reset")
+    .setName("settester")
     .setDescription(
-      "Elimina toda la estructura de Summer Tier List."
-    )
-    .setDefaultMemberPermissions(
-      PermissionFlagsBits.Administrator
-    ),
-
-  new SlashCommandBuilder()
-    .setName("staffsetup")
-    .setDescription(
-      "Crea los rangos oficiales de staff."
-    )
-    .setDefaultMemberPermissions(
-      PermissionFlagsBits.Administrator
-    ),
-
-  new SlashCommandBuilder()
-    .setName("result")
-    .setDescription(
-      "Registra un resultado de test."
+      "Asigna a un usuario como tester de una modalidad."
     )
     .addUserOption(option =>
       option
-        .setName("jugador")
+        .setName("usuario")
         .setDescription(
-          "Jugador evaluado"
+          "Usuario"
         )
         .setRequired(true)
     )
@@ -440,32 +744,98 @@ const commands = [
         )
         .setRequired(true)
         .addChoices(
-          ...MODE_KEYS.map(mode => ({
-            name:
-              `${MODES[mode].emoji} ${MODES[mode].name}`,
-            value: mode
-          }))
+          ...MODE_KEYS.map(
+            mode => ({
+              name:
+                `${MODES[mode].emoji} ${MODES[mode].name}`,
+              value: mode
+            })
+          )
+        )
+    ),
+
+  new SlashCommandBuilder()
+    .setName("removetester")
+    .setDescription(
+      "Quita un tester de una modalidad."
+    )
+    .addUserOption(option =>
+      option
+        .setName("usuario")
+        .setDescription(
+          "Usuario"
+        )
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("modalidad")
+        .setDescription(
+          "Modalidad"
+        )
+        .setRequired(true)
+        .addChoices(
+          ...MODE_KEYS.map(
+            mode => ({
+              name:
+                `${MODES[mode].emoji} ${MODES[mode].name}`,
+              value: mode
+            })
+          )
+        )
+    ),
+
+  new SlashCommandBuilder()
+    .setName("result")
+    .setDescription(
+      "Registra un resultado."
+    )
+    .addUserOption(option =>
+      option
+        .setName("jugador")
+        .setDescription(
+          "Jugador"
+        )
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("modalidad")
+        .setDescription(
+          "Modalidad"
+        )
+        .setRequired(true)
+        .addChoices(
+          ...MODE_KEYS.map(
+            mode => ({
+              name:
+                `${MODES[mode].emoji} ${MODES[mode].name}`,
+              value: mode
+            })
+          )
         )
     )
     .addStringOption(option =>
       option
         .setName("tier")
         .setDescription(
-          "Tier obtenido"
+          "Tier"
         )
         .setRequired(true)
         .addChoices(
-          ...TIERS.map(tier => ({
-            name: tier,
-            value: tier
-          }))
+          ...TIERS.map(
+            tier => ({
+              name: tier,
+              value: tier
+            })
+          )
         )
     )
     .addStringOption(option =>
       option
         .setName("minecraft")
         .setDescription(
-          "Nombre de Minecraft"
+          "Minecraft IGN"
         )
         .setRequired(true)
     ),
@@ -473,13 +843,13 @@ const commands = [
   new SlashCommandBuilder()
     .setName("highresult")
     .setDescription(
-      "Registra un resultado de High Test."
+      "Registra un High Test."
     )
     .addUserOption(option =>
       option
         .setName("jugador")
         .setDescription(
-          "Jugador evaluado"
+          "Jugador"
         )
         .setRequired(true)
     )
@@ -491,46 +861,52 @@ const commands = [
         )
         .setRequired(true)
         .addChoices(
-          ...MODE_KEYS.map(mode => ({
-            name:
-              `${MODES[mode].emoji} ${MODES[mode].name}`,
-            value: mode
-          }))
+          ...MODE_KEYS.map(
+            mode => ({
+              name:
+                `${MODES[mode].emoji} ${MODES[mode].name}`,
+              value: mode
+            })
+          )
         )
     )
     .addStringOption(option =>
       option
         .setName("tier")
         .setDescription(
-          "Tier obtenido"
+          "Tier"
         )
         .setRequired(true)
         .addChoices(
-          ...TIERS.map(tier => ({
-            name: tier,
-            value: tier
-          }))
+          ...TIERS.map(
+            tier => ({
+              name: tier,
+              value: tier
+            })
+          )
         )
     )
     .addStringOption(option =>
       option
         .setName("minecraft")
         .setDescription(
-          "Nombre de Minecraft"
+          "Minecraft IGN"
         )
         .setRequired(true)
     ),
 
   new SlashCommandBuilder()
-    .setName("results")
+    .setName("removecooldown")
     .setDescription(
-      "Muestra los resultados recientes."
-    ),
-
-  new SlashCommandBuilder()
-    .setName("queue")
-    .setDescription(
-      "Muestra la cola de una modalidad."
+      "Elimina el cooldown de un jugador."
+    )
+    .addUserOption(option =>
+      option
+        .setName("jugador")
+        .setDescription(
+          "Jugador"
+        )
+        .setRequired(true)
     )
     .addStringOption(option =>
       option
@@ -540,11 +916,42 @@ const commands = [
         )
         .setRequired(true)
         .addChoices(
-          ...MODE_KEYS.map(mode => ({
-            name:
-              `${MODES[mode].emoji} ${MODES[mode].name}`,
-            value: mode
-          }))
+          ...MODE_KEYS.map(
+            mode => ({
+              name:
+                `${MODES[mode].emoji} ${MODES[mode].name}`,
+              value: mode
+            })
+          )
+        )
+    ),
+
+  new SlashCommandBuilder()
+    .setName("results")
+    .setDescription(
+      "Muestra resultados recientes."
+    ),
+
+  new SlashCommandBuilder()
+    .setName("queue")
+    .setDescription(
+      "Muestra una waitlist."
+    )
+    .addStringOption(option =>
+      option
+        .setName("modalidad")
+        .setDescription(
+          "Modalidad"
+        )
+        .setRequired(true)
+        .addChoices(
+          ...MODE_KEYS.map(
+            mode => ({
+              name:
+                `${MODES[mode].emoji} ${MODES[mode].name}`,
+              value: mode
+            })
+          )
         )
     ),
 
@@ -565,13 +972,34 @@ const commands = [
   new SlashCommandBuilder()
     .setName("support")
     .setDescription(
-      "Muestra información del sistema de soporte."
+      "Muestra el sistema de soporte."
+    ),
+
+  new SlashCommandBuilder()
+    .setName("staffsetup")
+    .setDescription(
+      "Crea los roles oficiales de staff."
+    )
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator
+    ),
+
+  new SlashCommandBuilder()
+    .setName("reset")
+    .setDescription(
+      "Reinicia la estructura de Summer Tier List."
+    )
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator
     )
 
-].map(command => command.toJSON());
+].map(
+  command =>
+    command.toJSON()
+  );
 
 /* =========================================================
-   REGISTRO AUTOMÁTICO
+   REGISTER COMMANDS
 ========================================================= */
 
 async function registerCommands() {
@@ -584,7 +1012,9 @@ async function registerCommands() {
     const rest =
       new REST({
         version: "10"
-      }).setToken(TOKEN);
+      }).setToken(
+        TOKEN
+      );
 
     await rest.put(
       Routes.applicationGuildCommands(
@@ -597,105 +1027,52 @@ async function registerCommands() {
     );
 
     console.log(
-      `✅ ${commands.length} comandos registrados correctamente.`
+      `✅ ${commands.length} comandos registrados.`
     );
 
   } catch (error) {
 
     console.error(
-      "❌ Error registrando comandos:"
+      "❌ Error registrando comandos:",
+      error
     );
-
-    console.error(error);
   }
 }
 
 /* =========================================================
-   CREAR ROLES
+   CREATE ROLES
 ========================================================= */
 
-const STAFF_ROLES = [
-  {
-    name: "👑 Owner",
-    color: 0xF1C40F,
-    hoist: true
-  },
-  {
-    name: "🛡️ Administrator",
-    color: 0xE74C3C,
-    hoist: true
-  },
-  {
-    name: "🔨 Moderator",
-    color: 0xE67E22,
-    hoist: true
-  },
-  {
-    name: "💎 Tierlist Manager",
-    color: 0x00BFFF,
-    hoist: true
-  },
-  {
-    name: "🏆 High Tester",
-    color: 0xFF0000,
-    hoist: true
-  },
-  {
-    name: "🧪 Senior Tester",
-    color: 0x9B59B6,
-    hoist: true
-  },
-  {
-    name: "⚔️ Tester",
-    color: 0x3498DB,
-    hoist: true
-  },
-  {
-    name: "📋 Trial Tester",
-    color: 0x1ABC9C,
-    hoist: true
-  },
-  {
-    name: "🎫 Support",
-    color: 0x2ECC71,
-    hoist: true
-  },
-  {
-    name: "🧑‍💻 Developer",
-    color: 0x34495E,
-    hoist: true
-  },
-  {
-    name: "🤝 Partner",
-    color: 0xF39C12,
-    hoist: false
-  },
-  {
-    name: "📝 Staff Applicant",
-    color: 0x95A5A6,
-    hoist: false
-  }
-];
+async function createStaffRoles(
+  guild
+) {
 
-async function createStaffRoles(guild) {
+  for (
+    const roleData
+    of STAFF_ROLES
+  ) {
 
-  for (const roleData of STAFF_ROLES) {
-
-    const existing =
-      guild.roles.cache.find(
+    if (
+      guild.roles.cache.some(
         role =>
-          role.name === roleData.name
-      );
-
-    if (existing) continue;
+          role.name ===
+          roleData.name
+      )
+    ) {
+      continue;
+    }
 
     try {
 
       await guild.roles.create({
-        name: roleData.name,
-        color: roleData.color,
-        hoist: roleData.hoist,
-        mentionable: true,
+        name:
+          roleData.name,
+        color:
+          roleData.color,
+        hoist:
+          roleData.hoist,
+        mentionable:
+          true,
         reason:
           "Summer Tier List staff setup"
       });
@@ -703,15 +1080,165 @@ async function createStaffRoles(guild) {
     } catch (error) {
 
       console.error(
-        `❌ No se pudo crear ${roleData.name}:`,
-        error
+        `❌ Error creando ${roleData.name}:`,
+        error.message
       );
     }
   }
 }
 
+async function createCommunityRoles(
+  guild
+) {
+
+  const allRoles = [
+    ...REGION_ROLES,
+    ...PING_ROLES
+  ];
+
+  for (
+    const roleData
+    of allRoles
+  ) {
+
+    if (
+      guild.roles.cache.some(
+        role =>
+          role.name ===
+          roleData.name
+      )
+    ) {
+      continue;
+    }
+
+    try {
+
+      await guild.roles.create({
+        name:
+          roleData.name,
+        color:
+          roleData.color,
+        hoist:
+          false,
+        mentionable:
+          true,
+        reason:
+          "Summer Tier List community roles"
+      });
+
+    } catch (error) {
+
+      console.error(
+        `❌ Error creando ${roleData.name}:`,
+        error.message
+      );
+    }
+  }
+
+  for (
+    const mode
+    of MODE_KEYS
+  ) {
+
+    const info =
+      MODES[mode];
+
+    const roleName =
+      `${info.emoji} ${info.name}`;
+
+    if (
+      guild.roles.cache.some(
+        role =>
+          role.name ===
+          roleName
+      )
+    ) {
+      continue;
+    }
+
+    try {
+
+      await guild.roles.create({
+        name:
+          roleName,
+        color:
+          info.color,
+        hoist:
+          false,
+        mentionable:
+          true,
+        reason:
+          "Summer Tier List modality role"
+      });
+
+    } catch (error) {
+
+      console.error(
+        `❌ Error creando ${roleName}:`,
+        error.message
+      );
+    }
+  }
+}
+
+async function createTierRoles(
+  guild
+) {
+
+  for (
+    const mode
+    of MODE_KEYS
+  ) {
+
+    const info =
+      MODES[mode];
+
+    for (
+      const tier
+      of TIERS
+    ) {
+
+      const roleName =
+        `${info.emoji} ${info.name} ${tier}`;
+
+      if (
+        guild.roles.cache.some(
+          role =>
+            role.name ===
+            roleName
+        )
+      ) {
+        continue;
+      }
+
+      try {
+
+        await guild.roles.create({
+          name:
+            roleName,
+          color:
+            info.color,
+          hoist:
+            false,
+          mentionable:
+            true,
+          reason:
+            "Summer Tier List tier role"
+        });
+
+      } catch (error) {
+
+        console.error(
+          `❌ Error creando ${roleName}:`,
+          error.message
+        );
+      }
+    }
+  }
+}
+
 /* =========================================================
-   CREAR CATEGORÍA
+   CATEGORIES
 ========================================================= */
 
 async function getOrCreateCategory(
@@ -724,7 +1251,8 @@ async function getOrCreateCategory(
       channel =>
         channel.type ===
           ChannelType.GuildCategory &&
-        channel.name === name
+        channel.name ===
+          name
     );
 
   if (!category) {
@@ -741,7 +1269,50 @@ async function getOrCreateCategory(
 }
 
 /* =========================================================
-   CREAR WAITLIST
+   GENERAL CHANNEL
+========================================================= */
+
+async function getOrCreateTextChannel(
+  guild,
+  name,
+  category
+) {
+
+  let channel =
+    guild.channels.cache.find(
+      c =>
+        c.type ===
+          ChannelType.GuildText &&
+        c.name ===
+          name
+    );
+
+  if (!channel) {
+
+    channel =
+      await guild.channels.create({
+        name,
+        type:
+          ChannelType.GuildText,
+        parent:
+          category.id
+      });
+
+  } else if (
+    channel.parentId !==
+    category.id
+  ) {
+
+    await channel.setParent(
+      category.id
+    );
+  }
+
+  return channel;
+}
+
+/* =========================================================
+   WAITLIST CHANNEL
 ========================================================= */
 
 async function createWaitlistChannel(
@@ -750,18 +1321,22 @@ async function createWaitlistChannel(
   mode
 ) {
 
-  const info = modeInfo(mode);
+  const info =
+    MODES[mode];
 
   const channelName =
-    `${info.emoji}・${mode}-waitlist`;
+    info.channel;
 
   let channel =
     guild.channels.cache.find(
       c =>
-        c.type === ChannelType.GuildText &&
+        c.type ===
+          ChannelType.GuildText &&
         (
-          c.name === channelName ||
-          c.name === `${mode}-waitlist`
+          c.name ===
+            channelName ||
+          c.name ===
+            `${mode}-waitlist`
         )
     );
 
@@ -769,14 +1344,20 @@ async function createWaitlistChannel(
 
     channel =
       await guild.channels.create({
-        name: channelName,
-        type: ChannelType.GuildText,
-        parent: category.id
+        name:
+          channelName,
+        type:
+          ChannelType.GuildText,
+        parent:
+          category.id
       });
 
   } else {
 
-    if (channel.name !== channelName) {
+    if (
+      channel.name !==
+      channelName
+    ) {
 
       await channel.setName(
         channelName
@@ -784,7 +1365,8 @@ async function createWaitlistChannel(
     }
 
     if (
-      channel.parentId !== category.id
+      channel.parentId !==
+      category.id
     ) {
 
       await channel.setParent(
@@ -802,122 +1384,93 @@ async function createWaitlistChannel(
 }
 
 /* =========================================================
-   PANEL WAITLIST
+   WAITLIST EMBED
 ========================================================= */
 
-async function ensureWaitlistPanel(
-  channel,
+function buildWaitlistEmbed(
   mode
 ) {
 
-  const info = modeInfo(mode);
-
-  let messages;
-
-  try {
-
-    messages =
-      await channel.messages.fetch({
-        limit: 50
-      });
-
-  } catch {
-    return;
-  }
-
-  const existing =
-    messages.find(
-      message =>
-        message.author.id ===
-          client.user.id &&
-        message.embeds.length > 0 &&
-        message.embeds[0].footer?.text ===
-          `Summer Tier List • ${mode}`
-    );
-
-  if (existing) {
-
-    await updateWaitlistPanel(
-      channel,
-      mode,
-      existing
-    );
-
-    return;
-  }
-
-  const embed =
-    buildWaitlistEmbed(mode);
-
-  const row =
-    buildWaitlistButtons(mode);
-
-  await channel.send({
-    embeds: [embed],
-    components: [row]
-  });
-}
-
-function buildWaitlistEmbed(mode) {
-
-  const info = modeInfo(mode);
+  const info =
+    MODES[mode];
 
   const queue =
-    db.waitlists[mode] || [];
+    db.waitlists[mode] ||
+    [];
 
   const active =
     db.waitlistStatus[mode];
 
+  const testers =
+    db.testers[mode] ||
+    [];
+
+  let queueText =
+    "📭 No players waiting.";
+
+  if (queue.length) {
+
+    queueText =
+      queue
+        .map(
+          (id, index) =>
+            `**${index + 1}.** <@${id}>`
+        )
+        .join("\n");
+  }
+
   return new EmbedBuilder()
     .setColor(
       active
-        ? 0x2ECC71
-        : 0xE74C3C
+        ? info.color
+        : 0xe74c3c
     )
     .setTitle(
-      `${info.emoji}  ${info.name.toUpperCase()}`
+      `${info.emoji} ${info.name.toUpperCase()}`
     )
     .setDescription(
       [
         "## ☀️ SUMMER TIER LIST",
         "",
-        `### ${info.emoji} ${info.name} Testing`,
-        "",
-        "Participa en la lista oficial para solicitar",
-        "un test de Minecraft PvP.",
-        "",
-        "━━━━━━━━━━━━━━━━━━━━",
-        "",
-        `**Estado:** ${
-          active
-            ? "🟢 OPEN"
-            : "🔴 CLOSED"
-        }`,
-        `**Jugadores en cola:** \`${queue.length}\``,
+        `### ${info.emoji} OFFICIAL ${info.name} WAITLIST`,
         "",
         active
-          ? "Presiona **Join Waitlist** para entrar."
-          : "La waitlist está temporalmente cerrada.",
+          ? "🟢 **QUEUE OPEN**"
+          : "🔴 **QUEUE CLOSED**",
+        "",
+        "Prove your skill.",
+        "Earn your tier.",
+        "Build your legacy.",
         "",
         "━━━━━━━━━━━━━━━━━━━━",
         "",
-        "⏱️ **Cooldown:** 3 días después de un resultado.",
-        "🎫 Los tickets son abiertos manualmente por staff.",
+        `👥 **Players Waiting:** \`${queue.length}\``,
+        `🧪 **Available Testers:** \`${testers.length}\``,
         "",
-        "### 📌 Reglas",
-        "• No abandones la cola después de ser llamado.",
-        "• No hagas spam de botones.",
-        "• Respeta a los testers y demás jugadores."
+        "### 📋 QUEUE",
+        queueText,
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "",
+        "⏱️ **Cooldown:** 3 days after an official result.",
+        "🎫 Tickets are opened manually by staff.",
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "",
+        "☀️ **Summer Tier List**",
+        "Official Minecraft PvP Testing"
       ].join("\n")
     )
     .setFooter({
       text:
-        `Summer Tier List • ${mode}`
+        `Summer Tier List • ${info.name}`
     })
     .setTimestamp();
 }
 
-function buildWaitlistButtons(mode) {
+function buildWaitlistButtons(
+  mode
+) {
 
   const active =
     db.waitlistStatus[mode];
@@ -936,7 +1489,9 @@ function buildWaitlistButtons(mode) {
         .setStyle(
           ButtonStyle.Success
         )
-        .setDisabled(!active),
+        .setDisabled(
+          !active
+        ),
 
       new ButtonBuilder()
         .setCustomId(
@@ -964,87 +1519,308 @@ function buildWaitlistButtons(mode) {
     );
 }
 
-async function updateWaitlistPanel(
+async function ensureWaitlistPanel(
   channel,
-  mode,
-  message
+  mode
 ) {
+
+  let messages;
 
   try {
 
-    await message.edit({
+    messages =
+      await channel.messages.fetch({
+        limit: 50
+      });
+
+  } catch {
+
+    return;
+  }
+
+  const footer =
+    `Summer Tier List • ${MODES[mode].name}`;
+
+  const existing =
+    messages.find(
+      message =>
+        message.author.id ===
+          client.user.id &&
+        message.embeds.length > 0 &&
+        message.embeds[0].footer?.text ===
+          footer
+    );
+
+  if (existing) {
+
+    await existing.edit({
       embeds: [
-        buildWaitlistEmbed(mode)
+        buildWaitlistEmbed(
+          mode
+        )
       ],
       components: [
-        buildWaitlistButtons(mode)
+        buildWaitlistButtons(
+          mode
+        )
       ]
     });
 
-  } catch {}
+    return;
+  }
+
+  await channel.send({
+    embeds: [
+      buildWaitlistEmbed(
+        mode
+      )
+    ],
+    components: [
+      buildWaitlistButtons(
+        mode
+      )
+    ]
+  });
 }
 
 async function updateAllWaitlistPanels(
   guild
 ) {
 
-  const category =
-    guild.channels.cache.find(
-      c =>
-        c.type ===
-          ChannelType.GuildCategory &&
-        c.name ===
-          "☀️ SUMMER TIER LIST"
-    );
-
-  if (!category) return;
-
-  for (const mode of MODE_KEYS) {
+  for (
+    const mode
+    of MODE_KEYS
+  ) {
 
     const channel =
       guild.channels.cache.find(
         c =>
-          c.parentId === category.id &&
-          (
-            c.name ===
-              `${modeInfo(mode).emoji}・${mode}-waitlist`
-          )
+          c.type ===
+            ChannelType.GuildText &&
+          c.name ===
+            MODES[mode].channel
       );
 
-    if (!channel) continue;
-
-    let messages;
-
-    try {
-
-      messages =
-        await channel.messages.fetch({
-          limit: 50
-        });
-
-    } catch {
+    if (!channel) {
       continue;
     }
 
-    const panel =
-      messages.find(
-        message =>
-          message.author.id ===
-            client.user.id &&
-          message.embeds.length > 0 &&
-          message.embeds[0].footer?.text ===
-            `Summer Tier List • ${mode}`
-      );
-
-    if (panel) {
-
-      await updateWaitlistPanel(
-        channel,
-        mode,
-        panel
-      );
-    }
+    await ensureWaitlistPanel(
+      channel,
+      mode
+    );
   }
+}
+
+/* =========================================================
+   ROLE PANEL
+========================================================= */
+
+function buildRolePanel() {
+
+  const embed =
+    new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle(
+        "☀️ SUMMER TIER LIST"
+      )
+      .setDescription(
+        [
+          "## 🎛️ PERSONAL ROLES",
+          "",
+          "Selecciona tus roles para personalizar tu experiencia.",
+          "",
+          "🌎 **REGION**",
+          "Selecciona la región donde juegas.",
+          "",
+          "🔔 **NOTIFICATIONS**",
+          "Elige qué anuncios quieres recibir.",
+          "",
+          "🎮 **MODALITIES**",
+          "Selecciona las modalidades que juegas.",
+          "",
+          "━━━━━━━━━━━━━━━━━━━━",
+          "",
+          "Puedes cambiar tus selecciones cuando quieras.",
+          "",
+          "☀️ **Summer Tier List**",
+          "Official Minecraft PvP Testing"
+        ].join("\n")
+      )
+      .setFooter({
+        text:
+          "Summer Tier List • Role Selection"
+      })
+      .setTimestamp();
+
+  const regionMenu =
+    new StringSelectMenuBuilder()
+      .setCustomId(
+        "roles:region"
+      )
+      .setPlaceholder(
+        "🌎 Selecciona tu región"
+      )
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(
+        REGION_ROLES.map(
+          role => ({
+            label:
+              role.name
+                .replace(
+                  /^.{2}/u,
+                  ""
+                )
+                .trim(),
+            value:
+              role.name,
+            emoji:
+              role.name.slice(0, 2)
+          })
+        )
+      );
+
+  const pingMenu =
+    new StringSelectMenuBuilder()
+      .setCustomId(
+        "roles:pings"
+      )
+      .setPlaceholder(
+        "🔔 Selecciona tus pings"
+      )
+      .setMinValues(0)
+      .setMaxValues(
+        PING_ROLES.length
+      )
+      .addOptions(
+        PING_ROLES.map(
+          role => ({
+            label:
+              role.name
+                .replace(
+                  /^.{2}/u,
+                  ""
+                )
+                .trim(),
+            value:
+              role.name,
+            emoji:
+              role.name.slice(0, 2)
+          })
+        )
+      );
+
+  const modeMenu =
+    new StringSelectMenuBuilder()
+      .setCustomId(
+        "roles:modalities"
+      )
+      .setPlaceholder(
+        "🎮 Selecciona tus modalidades"
+      )
+      .setMinValues(0)
+      .setMaxValues(
+        MODE_KEYS.length
+      )
+      .addOptions(
+        MODE_KEYS.map(
+          mode => ({
+            label:
+              MODES[mode].name,
+            value:
+              mode,
+            emoji:
+              MODES[mode].emoji
+          })
+        )
+      );
+
+  return {
+    embed,
+    components: [
+      new ActionRowBuilder()
+        .addComponents(
+          regionMenu
+        ),
+      new ActionRowBuilder()
+        .addComponents(
+          pingMenu
+        ),
+      new ActionRowBuilder()
+        .addComponents(
+          modeMenu
+        )
+    ]
+  };
+}
+
+async function createRolePanel(
+  guild
+) {
+
+  const category =
+    await getOrCreateCategory(
+      guild,
+      "🔔 ROLES"
+    );
+
+  const channel =
+    await getOrCreateTextChannel(
+      guild,
+      "🔔・roles",
+      category
+    );
+
+  let messages;
+
+  try {
+
+    messages =
+      await channel.messages.fetch({
+        limit: 50
+      });
+
+  } catch {
+
+    return channel;
+  }
+
+  const existing =
+    messages.find(
+      message =>
+        message.author.id ===
+          client.user.id &&
+        message.embeds.length > 0 &&
+        message.embeds[0].footer?.text ===
+          "Summer Tier List • Role Selection"
+    );
+
+  const panel =
+    buildRolePanel();
+
+  if (existing) {
+
+    await existing.edit({
+      embeds: [
+        panel.embed
+      ],
+      components:
+        panel.components
+    });
+
+  } else {
+
+    await channel.send({
+      embeds: [
+        panel.embed
+      ],
+      components:
+        panel.components
+    });
+  }
+
+  return channel;
 }
 
 /* =========================================================
@@ -1061,52 +1837,12 @@ async function createTicketPanel(
       "🎫 TICKETS"
     );
 
-  let channel =
-    guild.channels.cache.find(
-      c =>
-        c.type === ChannelType.GuildText &&
-        (
-          c.name ===
-            "🎫・ticket-panel" ||
-          c.name ===
-            "ticket-panel"
-        )
+  const channel =
+    await getOrCreateTextChannel(
+      guild,
+      "🎫・ticket-panel",
+      category
     );
-
-  if (!channel) {
-
-    channel =
-      await guild.channels.create({
-        name:
-          "🎫・ticket-panel",
-        type:
-          ChannelType.GuildText,
-        parent:
-          category.id
-      });
-
-  } else {
-
-    if (
-      channel.name !==
-        "🎫・ticket-panel"
-    ) {
-
-      await channel.setName(
-        "🎫・ticket-panel"
-      );
-    }
-
-    if (
-      channel.parentId !==
-        category.id
-    ) {
-
-      await channel.setParent(
-        category.id
-      );
-    }
-  }
 
   let messages;
 
@@ -1118,6 +1854,7 @@ async function createTicketPanel(
       });
 
   } catch {
+
     return channel;
   }
 
@@ -1131,83 +1868,149 @@ async function createTicketPanel(
           "Summer Tier List • Ticket Panel"
     );
 
-  if (!existing) {
+  if (existing) {
+    return channel;
+  }
 
-    const embed =
-      new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setTitle(
-          "🎫  SUMMER TIER LIST"
-        )
-        .setDescription(
-          [
-            "## Support & Applications",
-            "",
-            "¿Necesitas ayuda o quieres solicitar algo?",
-            "",
-            "Selecciona la opción correspondiente",
-            "después de pulsar **Open Ticket**.",
-            "",
-            "━━━━━━━━━━━━━━━━━━━━",
-            "",
-            "🛡️ **Support**",
-            "Ayuda general, problemas o dudas.",
-            "",
-            "🧪 **Tester Application**",
-            "Solicita entrar al equipo de testers.",
-            "",
-            "👑 **Staff Application**",
-            "Solicita entrar al staff.",
-            "",
-            "🔥 **High Test**",
-            "Solicita un High Test mediante soporte.",
-            "",
-            "━━━━━━━━━━━━━━━━━━━━",
-            "",
-            "🔒 Cada usuario puede tener un ticket abierto.",
-            "🤝 Trata al staff con respeto.",
-            "",
-            "**Summer Tier List • Official**"
-          ].join("\n")
-        )
-        .setFooter({
-          text:
-            "Summer Tier List • Ticket Panel"
-        })
-        .setTimestamp();
+  const embed =
+    new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle(
+        "🎫 SUMMER TIER LIST"
+      )
+      .setDescription(
+        [
+          "## SUPPORT & APPLICATIONS",
+          "",
+          "Necesitas ayuda, quieres aplicar o solicitar un High Test?",
+          "",
+          "Selecciona la opción correspondiente.",
+          "",
+          "━━━━━━━━━━━━━━━━━━━━",
+          "",
+          "🛡️ **Support**",
+          "Ayuda general, problemas o dudas.",
+          "",
+          "🧪 **Tester Application**",
+          "Aplicar para Tester.",
+          "",
+          "👑 **Staff Application**",
+          "Aplicar para Staff.",
+          "",
+          "🔥 **High Test**",
+          "Solicitar un High Test mediante soporte.",
+          "",
+          "━━━━━━━━━━━━━━━━━━━━",
+          "",
+          "🔒 Un ticket abierto por usuario.",
+          "🤝 Respeta al staff."
+        ].join("\n")
+      )
+      .setFooter({
+        text:
+          "Summer Tier List • Ticket Panel"
+      })
+      .setTimestamp();
 
-    const row =
+  const button =
+    new ButtonBuilder()
+      .setCustomId(
+        "ticket:open"
+      )
+      .setLabel(
+        "Open Ticket"
+      )
+      .setEmoji("🎫")
+      .setStyle(
+        ButtonStyle.Primary
+      );
+
+  await channel.send({
+    embeds: [
+      embed
+    ],
+    components: [
       new ActionRowBuilder()
         .addComponents(
-          new ButtonBuilder()
-            .setCustomId(
-              "ticket:open"
-            )
-            .setLabel(
-              "Open Ticket"
-            )
-            .setEmoji("🎫")
-            .setStyle(
-              ButtonStyle.Primary
-            )
-        );
-
-    await channel.send({
-      embeds: [embed],
-      components: [row]
-    });
-  }
+          button
+        )
+    ]
+  });
 
   return channel;
 }
 
 /* =========================================================
-   CREAR ESTRUCTURA
+   STAFF LOGS
+========================================================= */
+
+async function logStaffAction(
+  guild,
+  title,
+  description,
+  color = 0x5865f2
+) {
+
+  const channel =
+    guild.channels.cache.find(
+      c =>
+        c.type ===
+          ChannelType.GuildText &&
+        c.name ===
+          "📋・staff-logs"
+    );
+
+  if (!channel) {
+    return;
+  }
+
+  const embed =
+    new EmbedBuilder()
+      .setColor(color)
+      .setTitle(title)
+      .setDescription(
+        description
+      )
+      .setFooter({
+        text:
+          "Summer Tier List • Staff Logs"
+      })
+      .setTimestamp();
+
+  await channel.send({
+    embeds: [
+      embed
+    ]
+  }).catch(() => {});
+}
+
+/* =========================================================
+   SETUP SERVER
 ========================================================= */
 
 async function setupServer(
   guild
 ) {
+
+  console.log(
+    "🔧 Configurando Summer Tier List..."
+  );
+
+  await createStaffRoles(
+    guild
+  );
+
+  await createCommunityRoles(
+    guild
+  );
+
+  await createTierRoles(
+    guild
+  );
+
+  /* =========================
+     MAIN
+  ========================= */
 
   const mainCategory =
     await getOrCreateCategory(
@@ -1215,7 +2018,10 @@ async function setupServer(
       "☀️ SUMMER TIER LIST"
     );
 
-  for (const mode of MODE_KEYS) {
+  for (
+    const mode
+    of MODE_KEYS
+  ) {
 
     await createWaitlistChannel(
       guild,
@@ -1224,57 +2030,153 @@ async function setupServer(
     );
   }
 
-  const generalChannels = [
-    {
-      name: "📊・results",
-      key: "results"
-    },
-    {
-      name: "🏆・high-results",
-      key: "highResults"
-    },
-    {
-      name: "🆘・support",
-      key: "support"
-    },
-    {
-      name: "📋・staff-logs",
-      key: "logs"
-    }
-  ];
+  await getOrCreateTextChannel(
+    guild,
+    "📊・results",
+    mainCategory
+  );
 
-  for (const data of generalChannels) {
+  await getOrCreateTextChannel(
+    guild,
+    "🏆・high-results",
+    mainCategory
+  );
 
-    let channel =
-      guild.channels.cache.find(
-        c =>
-          c.type === ChannelType.GuildText &&
-          c.name === data.name
-      );
+  await getOrCreateTextChannel(
+    guild,
+    "📢・announcements",
+    mainCategory
+  );
 
-    if (!channel) {
+  await getOrCreateTextChannel(
+    guild,
+    "🆘・support",
+    mainCategory
+  );
 
-      await guild.channels.create({
-        name: data.name,
-        type: ChannelType.GuildText,
-        parent: mainCategory.id
-      });
-    }
-  }
+  await getOrCreateTextChannel(
+    guild,
+    "📋・staff-logs",
+    mainCategory
+  );
+
+  /* =========================
+     INFORMATION
+  ========================= */
+
+  const information =
+    await getOrCreateCategory(
+      guild,
+      "📌 INFORMATION"
+    );
+
+  await getOrCreateTextChannel(
+    guild,
+    "📜・rules",
+    information
+  );
+
+  await getOrCreateTextChannel(
+    guild,
+    "📖・how-to-play",
+    information
+  );
+
+  await getOrCreateTextChannel(
+    guild,
+    "🏆・tier-list",
+    information
+  );
+
+  /* =========================
+     ROLES
+  ========================= */
+
+  await createRolePanel(
+    guild
+  );
+
+  /* =========================
+     MEDIA
+  ========================= */
+
+  const media =
+    await getOrCreateCategory(
+      guild,
+      "🎬 MEDIA"
+    );
+
+  await getOrCreateTextChannel(
+    guild,
+    "📸・screenshots",
+    media
+  );
+
+  await getOrCreateTextChannel(
+    guild,
+    "🎥・clips",
+    media
+  );
+
+  await getOrCreateTextChannel(
+    guild,
+    "🏅・highlights",
+    media
+  );
+
+  await getOrCreateTextChannel(
+    guild,
+    "🖼️・media",
+    media
+  );
+
+  await getOrCreateTextChannel(
+    guild,
+    "🎨・community-creations",
+    media
+  );
+
+  /* =========================
+     STAFF
+  ========================= */
+
+  const staff =
+    await getOrCreateCategory(
+      guild,
+      "🛡️ STAFF"
+    );
+
+  await getOrCreateTextChannel(
+    guild,
+    "💬・staff-chat",
+    staff
+  );
+
+  await getOrCreateTextChannel(
+    guild,
+    "📁・applications",
+    staff
+  );
+
+  /* =========================
+     TICKETS
+  ========================= */
 
   await createTicketPanel(
     guild
   );
 
-  await createStaffRoles(
+  await updateAllWaitlistPanels(
     guild
   );
 
-  return mainCategory;
+  console.log(
+    "✅ Setup terminado."
+  );
 }
 
 /* =========================================================
-   INTERACCIONES
+   INTERACTIONS
 ========================================================= */
 
 client.on(
@@ -1298,11 +2200,14 @@ client.on(
            PING
         ========================= */
 
-        if (command === "ping") {
+        if (
+          command ===
+          "ping"
+        ) {
 
           await interaction.reply({
             content:
-              `🏓 Pong!\n\nLatency: **${client.ws.ping}ms**`,
+              `🏓 **Pong!**\n\nLatency: **${client.ws.ping}ms**`,
             ephemeral: true
           });
 
@@ -1313,7 +2218,10 @@ client.on(
            SETUP
         ========================= */
 
-        if (command === "setup") {
+        if (
+          command ===
+          "setup"
+        ) {
 
           await interaction.deferReply({
             ephemeral: true
@@ -1327,23 +2235,22 @@ client.on(
             [
               "☀️ **SUMMER TIER LIST**",
               "",
-              "╭──────────────────────╮",
-              "│  ✦ SERVER SETUP DONE  │",
-              "╰──────────────────────╯",
+              "╭────────────────────────╮",
+              "│     ✦ SETUP COMPLETE ✦ │",
+              "╰────────────────────────╯",
               "",
               "🟢 **Waitlists:** 5",
-              "🎫 **Ticket system:** Ready",
-              "👑 **Staff roles:** Ready",
+              "🎛️ **Role Selection:** Ready",
+              "🔔 **Pings:** Ready",
+              "🌎 **Regions:** Ready",
+              "🎮 **Modalities:** Ready",
               "📊 **Results:** Ready",
               "🏆 **High Results:** Ready",
+              "🎫 **Tickets:** Ready",
+              "🎬 **Media:** Ready",
+              "🛡️ **Staff:** Ready",
               "",
-              "🟠 NetPot",
-              "🧪 UHC",
-              "⚔️ Sword",
-              "📦 BoxPvP",
-              "💎 CrystalPvP",
-              "",
-              "✨ Todos los paneles fueron creados automáticamente."
+              "✨ Summer Tier List está configurado."
             ].join("\n")
           );
 
@@ -1359,29 +2266,83 @@ client.on(
           "setupwaitlist"
         ) {
 
+          if (
+            !canManageWaitlist(
+              interaction.member
+            )
+          ) {
+
+            await interaction.reply({
+              content:
+                "❌ No tienes permiso para configurar las waitlists.",
+              ephemeral: true
+            });
+
+            return;
+          }
+
           await interaction.deferReply({
             ephemeral: true
           });
 
-          await setupServer(
+          await updateAllWaitlistPanels(
             interaction.guild
           );
 
           await interaction.editReply(
-            "✅ **Los 5 paneles de waitlist están configurados y actualizados.**"
+            "✅ **Las 5 waitlists fueron configuradas y actualizadas.**"
           );
 
           return;
         }
 
         /* =========================
-           WAITLIST ON/OFF
+           ROLES
+        ========================= */
+
+        if (
+          command ===
+          "roles"
+        ) {
+
+          await interaction.deferReply({
+            ephemeral: true
+          });
+
+          await createRolePanel(
+            interaction.guild
+          );
+
+          await interaction.editReply(
+            "✅ **Panel de roles configurado en 🔔・roles.**"
+          );
+
+          return;
+        }
+
+        /* =========================
+           WAITLIST
         ========================= */
 
         if (
           command ===
           "waitlist"
         ) {
+
+          if (
+            !canManageWaitlist(
+              interaction.member
+            )
+          ) {
+
+            await interaction.reply({
+              content:
+                "❌ No tienes permiso.",
+              ephemeral: true
+            });
+
+            return;
+          }
 
           const mode =
             interaction.options.getString(
@@ -1396,7 +2357,7 @@ client.on(
           db.waitlistStatus[mode] =
             state === "on";
 
-          saveDB(db);
+          saveDB();
 
           await updateAllWaitlistPanels(
             interaction.guild
@@ -1416,131 +2377,209 @@ client.on(
         }
 
         /* =========================
-           RESET
-        ========================= */
-
-        if (command === "reset") {
-
-          await interaction.deferReply({
-            ephemeral: true
-          });
-
-          const guild =
-            interaction.guild;
-
-          const names = [
-            "☀️ SUMMER TIER LIST",
-            "🎫 TICKETS"
-          ];
-
-          let deleted = 0;
-
-          for (const name of names) {
-
-            const category =
-              guild.channels.cache.find(
-                c =>
-                  c.type ===
-                    ChannelType.GuildCategory &&
-                  c.name === name
-              );
-
-            if (!category) continue;
-
-            const children =
-              guild.channels.cache.filter(
-                c =>
-                  c.parentId ===
-                  category.id
-              );
-
-            for (
-              const channel
-              of children.values()
-            ) {
-
-              try {
-
-                await channel.delete(
-                  "Summer Tier List reset"
-                );
-
-                deleted++;
-
-              } catch {}
-            }
-
-            try {
-
-              await category.delete(
-                "Summer Tier List reset"
-              );
-
-            } catch {}
-          }
-
-          db =
-            defaultDatabase();
-
-          saveDB(db);
-
-          await interaction.editReply(
-            [
-              "🧹 **SUMMER TIER LIST RESET**",
-              "",
-              `🗑️ Canales eliminados: **${deleted}**`,
-              "💾 Base de datos reiniciada.",
-              "",
-              "Puedes ejecutar **/setup** nuevamente."
-            ].join("\n")
-          );
-
-          return;
-        }
-
-        /* =========================
-           STAFF SETUP
+           SET TESTER
         ========================= */
 
         if (
           command ===
-          "staffsetup"
+          "settester"
         ) {
 
-          await interaction.deferReply({
+          if (
+            !hasRole(
+              interaction.member,
+              [
+                "👑 Owner",
+                "🛡️ Administrator",
+                "💎 Tierlist Manager"
+              ]
+            )
+          ) {
+
+            await interaction.reply({
+              content:
+                "❌ Solo Owner, Administrator o Tierlist Manager pueden administrar testers.",
+              ephemeral: true
+            });
+
+            return;
+          }
+
+          const user =
+            interaction.options.getUser(
+              "usuario"
+            );
+
+          const mode =
+            interaction.options.getString(
+              "modalidad"
+            );
+
+          if (
+            db.testers[mode].includes(
+              user.id
+            )
+          ) {
+
+            await interaction.reply({
+              content:
+                `ℹ️ <@${user.id}> ya es Tester de **${MODES[mode].name}**.`,
+              ephemeral: true
+            });
+
+            return;
+          }
+
+          db.testers[mode].push(
+            user.id
+          );
+
+          saveDB();
+
+          const roleName =
+            `${MODES[mode].emoji} Tester • ${MODES[mode].name}`;
+
+          let role =
+            interaction.guild.roles.cache.find(
+              r =>
+                r.name ===
+                roleName
+            );
+
+          if (!role) {
+
+            role =
+              await interaction.guild.roles.create({
+                name:
+                  roleName,
+                color:
+                  MODES[mode].color,
+                hoist:
+                  false,
+                mentionable:
+                  true,
+                reason:
+                  "Summer Tier List modality tester"
+              });
+          }
+
+          const member =
+            await interaction.guild.members.fetch(
+              user.id
+            ).catch(() => null);
+
+          if (member && role) {
+            await member.roles.add(
+              role
+            ).catch(() => {});
+          }
+
+          await logStaffAction(
+            interaction.guild,
+            "🧪 Tester Assigned",
+            [
+              `👤 **Usuario:** <@${user.id}>`,
+              `🎮 **Modalidad:** ${MODES[mode].emoji} ${MODES[mode].name}`,
+              `👮 **Staff:** <@${interaction.user.id}>`
+            ].join("\n"),
+            MODES[mode].color
+          );
+
+          await interaction.reply({
+            content:
+              `✅ <@${user.id}> ahora es Tester de **${MODES[mode].name}**.\n\nPuede registrar resultados de esta modalidad.`,
             ephemeral: true
           });
-
-          await createStaffRoles(
-            interaction.guild
-          );
-
-          await interaction.editReply(
-            [
-              "👑 **STAFF SYSTEM**",
-              "",
-              "Los rangos oficiales fueron configurados.",
-              "",
-              "👑 Owner",
-              "🛡️ Administrator",
-              "🔨 Moderator",
-              "💎 Tierlist Manager",
-              "🏆 High Tester",
-              "🧪 Senior Tester",
-              "⚔️ Tester",
-              "📋 Trial Tester",
-              "🎫 Support",
-              "🧑‍💻 Developer",
-              "🤝 Partner",
-              "📝 Staff Applicant"
-            ].join("\n")
-          );
 
           return;
         }
 
         /* =========================
-           RESULT
+           REMOVE TESTER
+        ========================= */
+
+        if (
+          command ===
+          "removetester"
+        ) {
+
+          if (
+            !hasRole(
+              interaction.member,
+              [
+                "👑 Owner",
+                "🛡️ Administrator",
+                "💎 Tierlist Manager"
+              ]
+            )
+          ) {
+
+            await interaction.reply({
+              content:
+                "❌ No tienes permiso.",
+              ephemeral: true
+            });
+
+            return;
+          }
+
+          const user =
+            interaction.options.getUser(
+              "usuario"
+            );
+
+          const mode =
+            interaction.options.getString(
+              "modalidad"
+            );
+
+          db.testers[mode] =
+            db.testers[mode].filter(
+              id =>
+                id !== user.id
+            );
+
+          saveDB();
+
+          const roleName =
+            `${MODES[mode].emoji} Tester • ${MODES[mode].name}`;
+
+          const role =
+            interaction.guild.roles.cache.find(
+              r =>
+                r.name ===
+                roleName
+            );
+
+          const member =
+            await interaction.guild.members.fetch(
+              user.id
+            ).catch(() => null);
+
+          if (
+            member &&
+            role &&
+            member.roles.cache.has(
+              role.id
+            )
+          ) {
+
+            await member.roles.remove(
+              role
+            ).catch(() => {});
+          }
+
+          await interaction.reply({
+            content:
+              `✅ <@${user.id}> dejó de ser Tester de **${MODES[mode].name}**.`,
+            ephemeral: true
+          });
+
+          return;
+        }
+
+        /* =========================
+           RESULT / HIGH RESULT
         ========================= */
 
         if (
@@ -1548,29 +2587,54 @@ client.on(
           command === "highresult"
         ) {
 
-          if (
-            !isStaff(
-              interaction.member
-            )
-          ) {
+          const mode =
+            interaction.options.getString(
+              "modalidad"
+            );
 
-            await interaction.reply({
-              content:
-                "❌ No tienes permiso para registrar resultados.",
-              ephemeral: true
-            });
+          const high =
+            command ===
+            "highresult";
 
-            return;
+          if (high) {
+
+            if (
+              !canHighResult(
+                interaction.member
+              )
+            ) {
+
+              await interaction.reply({
+                content:
+                  "❌ Necesitas el rango **High Tester**, Tierlist Manager o superior.",
+                ephemeral: true
+              });
+
+              return;
+            }
+
+          } else {
+
+            if (
+              !canResult(
+                interaction.member,
+                mode
+              )
+            ) {
+
+              await interaction.reply({
+                content:
+                  `❌ No eres Tester autorizado para **${MODES[mode].name}**.`,
+                ephemeral: true
+              });
+
+              return;
+            }
           }
 
           const player =
             interaction.options.getUser(
               "jugador"
-            );
-
-          const mode =
-            interaction.options.getString(
-              "modalidad"
             );
 
           const tier =
@@ -1583,9 +2647,32 @@ client.on(
               "minecraft"
             );
 
-          const high =
-            command ===
-            "highresult";
+          /*
+           * IMPORTANTE:
+           *
+           * NO HAY CHECK DE COOLDOWN AQUÍ.
+           *
+           * El tester puede volver a poner /result
+           * para corregir un resultado.
+           */
+
+          const previous =
+            [
+              ...db.results,
+              ...db.highResults
+            ]
+              .filter(
+                result =>
+                  result.userId ===
+                    player.id &&
+                  result.mode ===
+                    mode
+              )
+              .sort(
+                (a, b) =>
+                  b.createdAt -
+                  a.createdAt
+              )[0];
 
           const result = {
             userId:
@@ -1594,14 +2681,28 @@ client.on(
             discord:
               player.tag,
 
-            minecraft,
+            minecraft:
+              minecraft,
 
-            mode,
+            mode:
+              mode,
 
-            tier,
+            tier:
+              tier,
 
             tester:
               interaction.user.tag,
+
+            testerId:
+              interaction.user.id,
+
+            high:
+              high,
+
+            previousTier:
+              previous
+                ? previous.tier
+                : null,
 
             createdAt:
               Date.now()
@@ -1621,8 +2722,9 @@ client.on(
           }
 
           /*
-           * EL COOLDOWN SOLO SE CREA
-           * CUANDO HAY RESULTADO.
+           * COOLDOWN:
+           * Solo se aplica al jugador.
+           * Nunca bloquea al tester.
            */
 
           setCooldown(
@@ -1631,20 +2733,98 @@ client.on(
           );
 
           /*
-           * Sacarlo de la waitlist.
+           * SACAR DE WAITLIST
            */
 
           db.waitlists[mode] =
             db.waitlists[mode].filter(
               id =>
-                id !== player.id
+                id !==
+                player.id
             );
 
-          saveDB(db);
+          saveDB();
+
+          /*
+           * ASIGNAR TIER ROLE
+           */
+
+          const tierRoleName =
+            `${MODES[mode].emoji} ${MODES[mode].name} ${tier}`;
+
+          let tierRole =
+            interaction.guild.roles.cache.find(
+              role =>
+                role.name ===
+                tierRoleName
+            );
+
+          if (!tierRole) {
+
+            tierRole =
+              await interaction.guild.roles.create({
+                name:
+                  tierRoleName,
+                color:
+                  MODES[mode].color,
+                hoist:
+                  false,
+                mentionable:
+                  true,
+                reason:
+                  "Summer Tier List result tier"
+              });
+          }
+
+          const playerMember =
+            await interaction.guild.members.fetch(
+              player.id
+            ).catch(() => null);
+
+          if (playerMember) {
+
+            /*
+             * Elimina tiers anteriores
+             * SOLO de esta modalidad.
+             */
+
+            const oldTierRoles =
+              playerMember.roles.cache.filter(
+                role =>
+                  role.name.startsWith(
+                    `${MODES[mode].emoji} ${MODES[mode].name} `
+                  ) &&
+                  TIERS.includes(
+                    role.name.split(" ").pop()
+                  )
+              );
+
+            for (
+              const role
+              of oldTierRoles.values()
+            ) {
+
+              await playerMember.roles.remove(
+                role
+              ).catch(() => {});
+            }
+
+            /*
+             * Añade nuevo tier.
+             */
+
+            await playerMember.roles.add(
+              tierRole
+            ).catch(() => {});
+          }
 
           await updateAllWaitlistPanels(
             interaction.guild
           );
+
+          /*
+           * RESULT CHANNEL
+           */
 
           const channelName =
             high
@@ -1658,44 +2838,184 @@ client.on(
                 channelName
             );
 
+          const skinUrl =
+            `https://skinrender.dev/render/${encodeURIComponent(minecraft)}/avatar?size=256`;
+
           const embed =
             new EmbedBuilder()
               .setColor(
                 high
-                  ? 0xF1C40F
-                  : 0x5865F2
+                  ? 0xf1c40f
+                  : MODES[mode].color
               )
               .setTitle(
                 high
                   ? "🏆 HIGH TEST RESULT"
-                  : "📊 TEST RESULT"
+                  : "📊 OFFICIAL TEST RESULT"
               )
               .setDescription(
                 [
                   `## ${MODES[mode].emoji} ${MODES[mode].name}`,
                   "",
-                  `👤 **Player:** <@${player.id}>`,
-                  `⛏️ **Minecraft:** \`${minecraft}\``,
-                  `🏅 **Tier:** \`${tier}\``,
-                  `🧪 **Tester:** <@${interaction.user.id}>`,
+                  "☀️ **SUMMER TIER LIST**",
+                  "",
+                  `👤 **PLAYER**`,
+                  `<@${player.id}>`,
+                  "",
+                  `⛏️ **MINECRAFT**`,
+                  `\`${minecraft}\``,
+                  "",
+                  `🏅 **TIER ACHIEVED**`,
+                  `# ${tier}`,
+                  "",
+                  previous
+                    ? `📈 **PREVIOUS TIER:** \`${previous.tier}\``
+                    : "📈 **PREVIOUS TIER:** `Unranked`",
+                  "",
+                  `🧪 **TESTER**`,
+                  `<@${interaction.user.id}>`,
                   "",
                   "━━━━━━━━━━━━━━━━━━━━",
                   "",
-                  "☀️ **Summer Tier List**"
+                  high
+                    ? "🏆 **HIGH TEST COMPLETED**"
+                    : "✅ **OFFICIAL TEST COMPLETED**",
+                  "",
+                  "━━━━━━━━━━━━━━━━━━━━",
+                  "",
+                  "☀️ Summer Tier List",
+                  "Official Minecraft PvP Testing"
                 ].join("\n")
               )
+              .setThumbnail(
+                skinUrl
+              )
+              .setFooter({
+                text:
+                  `${MODES[mode].name} • Summer Tier List`
+              })
               .setTimestamp();
 
           if (channel) {
 
             await channel.send({
-              embeds: [embed]
+              embeds: [
+                embed
+              ]
             });
           }
 
+          await logStaffAction(
+            interaction.guild,
+            high
+              ? "🏆 High Test Result"
+              : "📊 Test Result",
+            [
+              `👤 **Player:** <@${player.id}>`,
+              `⛏️ **Minecraft:** \`${minecraft}\``,
+              `🎮 **Mode:** ${MODES[mode].name}`,
+              `🏅 **Tier:** ${tier}`,
+              `🧪 **Tester:** <@${interaction.user.id}>`
+            ].join("\n"),
+            MODES[mode].color
+          );
+
           await interaction.reply({
             content:
-              `✅ Resultado registrado para **${player.tag}** en **${MODES[mode].name} — ${tier}**.\n⏱️ Cooldown aplicado: **3 días**.`,
+              [
+                `✅ Resultado registrado: **${minecraft}**`,
+                "",
+                `${MODES[mode].emoji} **${MODES[mode].name}**`,
+                `🏅 **${tier}**`,
+                `🎖️ Rol asignado: **${tierRoleName}**`,
+                "",
+                "⏱️ Cooldown del jugador: **3 días**.",
+                "🧪 El cooldown **no bloquea al tester**."
+              ].join("\n"),
+            ephemeral: true
+          });
+
+          return;
+        }
+
+        /* =========================
+           REMOVE COOLDOWN
+        ========================= */
+
+        if (
+          command ===
+          "removecooldown"
+        ) {
+
+          if (
+            !canRemoveCooldown(
+              interaction.member
+            )
+          ) {
+
+            await interaction.reply({
+              content:
+                "❌ Necesitas ser **Helper o superior** para eliminar cooldowns.",
+              ephemeral: true
+            });
+
+            return;
+          }
+
+          const player =
+            interaction.options.getUser(
+              "jugador"
+            );
+
+          const mode =
+            interaction.options.getString(
+              "modalidad"
+            );
+
+          const cooldown =
+            getCooldown(
+              player.id,
+              mode
+            );
+
+          if (
+            !cooldown ||
+            cooldown <= Date.now()
+          ) {
+
+            removeCooldown(
+              player.id,
+              mode
+            );
+
+            await interaction.reply({
+              content:
+                `ℹ️ <@${player.id}> no tenía un cooldown activo en **${MODES[mode].name}**.`,
+              ephemeral: true
+            });
+
+            return;
+          }
+
+          removeCooldown(
+            player.id,
+            mode
+          );
+
+          await logStaffAction(
+            interaction.guild,
+            "🔓 Cooldown Removed",
+            [
+              `👤 **Jugador:** <@${player.id}>`,
+              `🎮 **Modalidad:** ${MODES[mode].name}`,
+              `👮 **Staff:** <@${interaction.user.id}>`
+            ].join("\n"),
+            0x2ecc71
+          );
+
+          await interaction.reply({
+            content:
+              `✅ Cooldown eliminado para <@${player.id}> en **${MODES[mode].name}**.`,
             ephemeral: true
           });
 
@@ -1740,9 +3060,9 @@ client.on(
 
           const embed =
             new EmbedBuilder()
-              .setColor(0x5865F2)
+              .setColor(0x5865f2)
               .setTitle(
-                "📊  SUMMER TIER LIST • RESULTS"
+                "📊 SUMMER TIER LIST • RESULTS"
               )
               .setDescription(
                 description
@@ -1754,7 +3074,9 @@ client.on(
               .setTimestamp();
 
           await interaction.reply({
-            embeds: [embed]
+            embeds: [
+              embed
+            ]
           });
 
           return;
@@ -1795,8 +3117,8 @@ client.on(
             new EmbedBuilder()
               .setColor(
                 active
-                  ? 0x2ECC71
-                  : 0xE74C3C
+                  ? MODES[mode].color
+                  : 0xe74c3c
               )
               .setTitle(
                 `${MODES[mode].emoji} ${MODES[mode].name} • QUEUE`
@@ -1819,7 +3141,9 @@ client.on(
               });
 
           await interaction.reply({
-            embeds: [embed],
+            embeds: [
+              embed
+            ],
             ephemeral: true
           });
 
@@ -1845,47 +3169,71 @@ client.on(
             [
               ...db.results,
               ...db.highResults
-            ].filter(
-              result =>
-                result.userId ===
-                user.id
-            );
-
-          const cooldowns =
-            MODE_KEYS.filter(
-              mode =>
-                getCooldown(
-                  user.id,
-                  mode
-                ) > Date.now()
-            );
+            ]
+              .filter(
+                result =>
+                  result.userId ===
+                  user.id
+              )
+              .sort(
+                (a, b) =>
+                  a.createdAt -
+                  b.createdAt
+              );
 
           const modeLines =
-            MODE_KEYS.map(
-              mode => {
+            MODE_KEYS
+              .map(
+                mode => {
 
-                const modeResults =
-                  results.filter(
-                    result =>
-                      result.mode ===
+                  const modeResults =
+                    results.filter(
+                      result =>
+                        result.mode ===
+                        mode
+                    );
+
+                  const latest =
+                    modeResults.at(-1);
+
+                  return [
+                    `${MODES[mode].emoji} **${MODES[mode].name}**`,
+                    latest
+                      ? `\`${latest.tier}\``
+                      : "`Unranked`"
+                  ].join(" ");
+                }
+              )
+              .join("\n");
+
+          const cooldownLines =
+            MODE_KEYS
+              .map(
+                mode => {
+
+                  const cooldown =
+                    getCooldown(
+                      user.id,
                       mode
-                  );
+                    );
 
-                const latest =
-                  modeResults.at(-1);
+                  if (
+                    cooldown >
+                    Date.now()
+                  ) {
 
-                return [
-                  `${MODES[mode].emoji} **${MODES[mode].name}**`,
-                  latest
-                    ? `\`${latest.tier}\``
-                    : "`Unranked`"
-                ].join(" ");
-              }
-            ).join("\n");
+                    return `${MODES[mode].emoji} ${MODES[mode].name}: **${formatRemaining(cooldown - Date.now())}**`;
+                  }
+
+                  return null;
+                }
+              )
+              .filter(Boolean)
+              .join("\n");
 
           const embed =
             new EmbedBuilder()
-              .setColor(0xF1C40F)
+              .setColor(0xf1c40f)
               .setAuthor({
                 name:
                   user.tag,
@@ -1893,18 +3241,21 @@ client.on(
                   user.displayAvatarURL()
               })
               .setTitle(
-                "☀️  PLAYER PROFILE"
+                "☀️ PLAYER PROFILE"
               )
               .setDescription(
                 [
                   `👤 **Discord:** <@${user.id}>`,
                   "",
-                  "### 🏅 Rankings",
+                  "### 🏅 RANKINGS",
                   modeLines,
                   "",
-                  "### 📈 Statistics",
+                  "### 📈 STATISTICS",
                   `• Tests: **${results.length}**`,
-                  `• Cooldowns: **${cooldowns.length}**`
+                  "",
+                  "### ⏱️ COOLDOWNS",
+                  cooldownLines ||
+                    "✅ No active cooldowns."
                 ].join("\n")
               )
               .setFooter({
@@ -1914,7 +3265,9 @@ client.on(
               .setTimestamp();
 
           await interaction.reply({
-            embeds: [embed]
+            embeds: [
+              embed
+            ]
           });
 
           return;
@@ -1939,8 +3292,357 @@ client.on(
           await interaction.reply({
             content:
               channel
-                ? `🎫 Puedes abrir un ticket aquí: ${channel}`
-                : "❌ El panel de tickets todavía no está configurado.",
+                ? `🎫 Abre tu ticket aquí: ${channel}`
+                : "❌ El sistema de tickets no está configurado.",
+            ephemeral: true
+          });
+
+          return;
+        }
+
+        /* =========================
+           STAFF SETUP
+        ========================= */
+
+        if (
+          command ===
+          "staffsetup"
+        ) {
+
+          await interaction.deferReply({
+            ephemeral: true
+          });
+
+          await createStaffRoles(
+            interaction.guild
+          );
+
+          await interaction.editReply(
+            [
+              "🛡️ **STAFF SYSTEM**",
+              "",
+              "Los rangos oficiales fueron configurados.",
+              "",
+              "👑 Owner",
+              "🛡️ Administrator",
+              "🔨 Moderator",
+              "🛠️ Helper",
+              "💎 Tierlist Manager",
+              "🏆 High Tester",
+              "🧪 Senior Tester",
+              "⚔️ Tester",
+              "📋 Trial Tester",
+              "🎫 Support",
+              "🧑‍💻 Developer",
+              "🤝 Partner",
+              "📝 Staff Applicant"
+            ].join("\n")
+          );
+
+          return;
+        }
+
+        /* =========================
+           RESET
+        ========================= */
+
+        if (
+          command ===
+          "reset"
+        ) {
+
+          await interaction.deferReply({
+            ephemeral: true
+          });
+
+          const guild =
+            interaction.guild;
+
+          const categories = [
+            "☀️ SUMMER TIER LIST",
+            "📌 INFORMATION",
+            "🔔 ROLES",
+            "🎬 MEDIA",
+            "🛡️ STAFF",
+            "🎫 TICKETS"
+          ];
+
+          let deleted = 0;
+
+          for (
+            const name
+            of categories
+          ) {
+
+            const category =
+              guild.channels.cache.find(
+                c =>
+                  c.type ===
+                    ChannelType.GuildCategory &&
+                  c.name ===
+                    name
+              );
+
+            if (!category) {
+              continue;
+            }
+
+            const children =
+              guild.channels.cache.filter(
+                c =>
+                  c.parentId ===
+                  category.id
+              );
+
+            for (
+              const channel
+              of children.values()
+            ) {
+
+              await channel.delete(
+                "Summer Tier List reset"
+              ).catch(() => {});
+
+              deleted++;
+            }
+
+            await category.delete(
+              "Summer Tier List reset"
+            ).catch(() => {});
+          }
+
+          db =
+            defaultDatabase();
+
+          saveDB();
+
+          await interaction.editReply(
+            [
+              "🧹 **SUMMER TIER LIST RESET**",
+              "",
+              `🗑️ Canales eliminados: **${deleted}**`,
+              "💾 Base de datos reiniciada.",
+              "",
+              "Ejecuta **/setup** para reconstruir todo."
+            ].join("\n")
+          );
+
+          return;
+        }
+      }
+
+      /* ===================================================
+         ROLE SELECT MENUS
+      =================================================== */
+
+      if (
+        interaction.isStringSelectMenu() &&
+        interaction.customId.startsWith(
+          "roles:"
+        )
+      ) {
+
+        const type =
+          interaction.customId.split(":")[1];
+
+        const member =
+          interaction.member;
+
+        /* =========================
+           REGION
+        ========================= */
+
+        if (
+          type ===
+          "region"
+        ) {
+
+          for (
+            const roleData
+            of REGION_ROLES
+          ) {
+
+            const role =
+              interaction.guild.roles.cache.find(
+                r =>
+                  r.name ===
+                  roleData.name
+              );
+
+            if (
+              role &&
+              member.roles.cache.has(
+                role.id
+              )
+            ) {
+
+              await member.roles.remove(
+                role
+              ).catch(() => {});
+            }
+          }
+
+          const selectedName =
+            interaction.values[0];
+
+          const selectedRole =
+            interaction.guild.roles.cache.find(
+              r =>
+                r.name ===
+                selectedName
+            );
+
+          if (selectedRole) {
+
+            await member.roles.add(
+              selectedRole
+            ).catch(() => {});
+          }
+
+          await interaction.reply({
+            content:
+              `🌎 Región seleccionada: **${selectedName}**`,
+            ephemeral: true
+          });
+
+          return;
+        }
+
+        /* =========================
+           PINGS
+        ========================= */
+
+        if (
+          type ===
+          "pings"
+        ) {
+
+          for (
+            const roleData
+            of PING_ROLES
+          ) {
+
+            const role =
+              interaction.guild.roles.cache.find(
+                r =>
+                  r.name ===
+                  roleData.name
+              );
+
+            if (!role) {
+              continue;
+            }
+
+            const selected =
+              interaction.values.includes(
+                role.name
+              );
+
+            if (selected) {
+
+              if (
+                !member.roles.cache.has(
+                  role.id
+                )
+              ) {
+
+                await member.roles.add(
+                  role
+                ).catch(() => {});
+              }
+
+            } else {
+
+              if (
+                member.roles.cache.has(
+                  role.id
+                )
+              ) {
+
+                await member.roles.remove(
+                  role
+                ).catch(() => {});
+              }
+            }
+          }
+
+          await interaction.reply({
+            content:
+              interaction.values.length
+                ? `🔔 Pings actualizados: **${interaction.values.length}** seleccionados.`
+                : "🔕 Has desactivado todos los pings.",
+            ephemeral: true
+          });
+
+          return;
+        }
+
+        /* =========================
+           MODALITIES
+        ========================= */
+
+        if (
+          type ===
+          "modalities"
+        ) {
+
+          for (
+            const mode
+            of MODE_KEYS
+          ) {
+
+            const roleName =
+              `${MODES[mode].emoji} ${MODES[mode].name}`;
+
+            const role =
+              interaction.guild.roles.cache.find(
+                r =>
+                  r.name ===
+                  roleName
+              );
+
+            if (!role) {
+              continue;
+            }
+
+            const selected =
+              interaction.values.includes(
+                mode
+              );
+
+            if (selected) {
+
+              if (
+                !member.roles.cache.has(
+                  role.id
+                )
+              ) {
+
+                await member.roles.add(
+                  role
+                ).catch(() => {});
+              }
+
+            } else {
+
+              if (
+                member.roles.cache.has(
+                  role.id
+                )
+              ) {
+
+                await member.roles.remove(
+                  role
+                ).catch(() => {});
+              }
+            }
+          }
+
+          await interaction.reply({
+            content:
+              interaction.values.length
+                ? `🎮 Modalidades seleccionadas: **${interaction.values.length}**.`
+                : "🎮 No seleccionaste ninguna modalidad.",
             ephemeral: true
           });
 
@@ -1969,7 +3671,9 @@ client.on(
           parts[2];
 
         if (
-          !MODE_KEYS.includes(mode)
+          !MODE_KEYS.includes(
+            mode
+          )
         ) {
           return;
         }
@@ -1978,7 +3682,10 @@ client.on(
            JOIN
         ========================= */
 
-        if (action === "join") {
+        if (
+          action ===
+          "join"
+        ) {
 
           if (
             !db.waitlistStatus[mode]
@@ -1993,6 +3700,10 @@ client.on(
             return;
           }
 
+          /*
+           * AQUÍ SÍ se comprueba cooldown.
+           */
+
           const cooldown =
             getCooldown(
               interaction.user.id,
@@ -2006,7 +3717,13 @@ client.on(
 
             await interaction.reply({
               content:
-                `⏳ Tienes cooldown en **${MODES[mode].name}**.\n\nTiempo restante: **${formatRemaining(cooldown - Date.now())}**.`,
+                [
+                  `⏳ Tienes cooldown en **${MODES[mode].name}**.`,
+                  "",
+                  `Tiempo restante: **${formatRemaining(cooldown - Date.now())}**`,
+                  "",
+                  "Si necesitas una excepción, contacta a un Helper o superior."
+                ].join("\n"),
               ephemeral: true
             });
 
@@ -2032,7 +3749,7 @@ client.on(
             interaction.user.id
           );
 
-          saveDB(db);
+          saveDB();
 
           await updateAllWaitlistPanels(
             interaction.guild
@@ -2040,7 +3757,13 @@ client.on(
 
           await interaction.reply({
             content:
-              `✅ Entraste a **${MODES[mode].name} Waitlist**.\n\n📍 Posición: **${db.waitlists[mode].length}**`,
+              [
+                `✅ Entraste a **${MODES[mode].name} Waitlist**.`,
+                "",
+                `📍 Posición: **${db.waitlists[mode].length}**`,
+                "",
+                "🧪 Un tester autorizado podrá gestionar tu test."
+              ].join("\n"),
             ephemeral: true
           });
 
@@ -2052,7 +3775,8 @@ client.on(
         ========================= */
 
         if (
-          action === "leave"
+          action ===
+          "leave"
         ) {
 
           const wasInside =
@@ -2067,7 +3791,7 @@ client.on(
                 interaction.user.id
             );
 
-          saveDB(db);
+          saveDB();
 
           await updateAllWaitlistPanels(
             interaction.guild
@@ -2089,7 +3813,8 @@ client.on(
         ========================= */
 
         if (
-          action === "view"
+          action ===
+          "view"
         ) {
 
           const queue =
@@ -2116,7 +3841,9 @@ client.on(
 
           const embed =
             new EmbedBuilder()
-              .setColor(0x5865F2)
+              .setColor(
+                MODES[mode].color
+              )
               .setTitle(
                 `${MODES[mode].emoji} ${MODES[mode].name} • WAITLIST`
               )
@@ -2129,7 +3856,9 @@ client.on(
               });
 
           await interaction.reply({
-            embeds: [embed],
+            embeds: [
+              embed
+            ],
             ephemeral: true
           });
 
@@ -2162,7 +3891,7 @@ client.on(
                   "Support"
                 )
                 .setDescription(
-                  "Ayuda general o problemas"
+                  "Ayuda general"
                 )
                 .setEmoji("🛡️")
                 .setValue(
@@ -2198,7 +3927,7 @@ client.on(
                   "High Test"
                 )
                 .setDescription(
-                  "Solicitar un High Test"
+                  "Solicitar High Test"
                 )
                 .setEmoji("🔥")
                 .setValue(
@@ -2211,7 +3940,9 @@ client.on(
             "🎫 **SUMMER TIER LIST**\n\nSelecciona qué necesitas:",
           components: [
             new ActionRowBuilder()
-              .addComponents(menu)
+              .addComponents(
+                menu
+              )
           ],
           ephemeral: true
         });
@@ -2274,7 +4005,10 @@ client.on(
 
         const channelName =
           `${names[type]}-${cleanUsername(interaction.user.username)}`
-            .slice(0, 95);
+            .slice(
+              0,
+              95
+            );
 
         const overwrites = [
           {
@@ -2300,6 +4034,7 @@ client.on(
           "👑 Owner",
           "🛡️ Administrator",
           "🔨 Moderator",
+          "🛠️ Helper",
           "💎 Tierlist Manager",
           "🏆 High Tester",
           "🧪 Senior Tester",
@@ -2321,10 +4056,13 @@ client.on(
                 roleName
             );
 
-          if (!role) continue;
+          if (!role) {
+            continue;
+          }
 
           overwrites.push({
-            id: role.id,
+            id:
+              role.id,
             allow: [
               PermissionFlagsBits.ViewChannel,
               PermissionFlagsBits.SendMessages,
@@ -2353,7 +4091,10 @@ client.on(
         let description =
           "Describe tu problema y un miembro del staff te ayudará.";
 
-        if (type === "tester") {
+        if (
+          type ===
+          "tester"
+        ) {
 
           title =
             "🧪 Tester Application";
@@ -2362,7 +4103,10 @@ client.on(
             "Completa la aplicación para solicitar entrar al equipo de testers.";
         }
 
-        if (type === "staff") {
+        if (
+          type ===
+          "staff"
+        ) {
 
           title =
             "👑 Staff Application";
@@ -2371,19 +4115,24 @@ client.on(
             "Completa la aplicación para solicitar entrar al staff.";
         }
 
-        if (type === "high") {
+        if (
+          type ===
+          "high"
+        ) {
 
           title =
             "🔥 High Test";
 
           description =
-            "Explica tu solicitud de High Test. Un miembro autorizado revisará tu caso.";
+            "Explica tu solicitud de High Test. Recuerda que los High Tests se solicitan mediante soporte.";
         }
 
         const embed =
           new EmbedBuilder()
-            .setColor(0x5865F2)
-            .setTitle(title)
+            .setColor(0x5865f2)
+            .setTitle(
+              title
+            )
             .setDescription(
               [
                 description,
@@ -2392,7 +4141,9 @@ client.on(
                 "",
                 `👤 **Usuario:** <@${interaction.user.id}>`,
                 "",
-                "🔒 Este ticket es privado."
+                "🔒 Este ticket es privado.",
+                "",
+                "Un miembro del staff te atenderá."
               ].join("\n")
             )
             .setFooter({
@@ -2432,9 +4183,7 @@ client.on(
                 `ticket:application:${type}`
               )
               .setLabel(
-                type === "tester"
-                  ? "Complete Application"
-                  : "Complete Application"
+                "Complete Application"
               )
               .setEmoji(
                 type === "tester"
@@ -2456,7 +4205,9 @@ client.on(
         await channel.send({
           content:
             `<@${interaction.user.id}>`,
-          embeds: [embed],
+          embeds: [
+            embed
+          ],
           components
         });
 
@@ -2472,7 +4223,7 @@ client.on(
             false
         });
 
-        saveDB(db);
+        saveDB();
 
         await interaction.reply({
           content:
@@ -2522,8 +4273,12 @@ client.on(
             .setStyle(
               TextInputStyle.Short
             )
-            .setRequired(true)
-            .setMaxLength(50);
+            .setRequired(
+              true
+            )
+            .setMaxLength(
+              50
+            );
 
         const experience =
           new TextInputBuilder()
@@ -2539,8 +4294,12 @@ client.on(
             .setStyle(
               TextInputStyle.Paragraph
             )
-            .setRequired(true)
-            .setMaxLength(1000);
+            .setRequired(
+              true
+            )
+            .setMaxLength(
+              1000
+            );
 
         const reason =
           new TextInputBuilder()
@@ -2556,8 +4315,12 @@ client.on(
             .setStyle(
               TextInputStyle.Paragraph
             )
-            .setRequired(true)
-            .setMaxLength(1000);
+            .setRequired(
+              true
+            )
+            .setMaxLength(
+              1000
+            );
 
         modal.addComponents(
 
@@ -2624,39 +4387,32 @@ client.on(
             Date.now()
         });
 
-        saveDB(db);
+        saveDB();
 
         const embed =
           new EmbedBuilder()
-            .setColor(0x2ECC71)
+            .setColor(0x2ecc71)
             .setTitle(
               type === "tester"
                 ? "🧪 TESTER APPLICATION"
                 : "👑 STAFF APPLICATION"
             )
-            .addFields(
-              {
-                name:
-                  "⛏️ Minecraft",
-                value:
-                  minecraft
-              },
-              {
-                name:
-                  "📖 Experiencia",
-                value:
-                  experience
-              },
-              {
-                name:
-                  "💬 Motivo",
-                value:
-                  reason
-              }
+            .setDescription(
+              [
+                `👤 **Applicant:** <@${interaction.user.id}>`,
+                "",
+                `⛏️ **Minecraft:** ${minecraft}`,
+                "",
+                `📖 **Experiencia:**`,
+                experience,
+                "",
+                `💬 **Motivo:**`,
+                reason
+              ].join("\n")
             )
             .setFooter({
               text:
-                `Application • ${interaction.user.tag}`
+                "Summer Tier List • Application"
             })
             .setTimestamp();
 
@@ -2718,26 +4474,25 @@ client.on(
           ticket.closedAt =
             Date.now();
 
-          saveDB(db);
+          saveDB();
         }
 
-        await interaction.reply(
-          {
-            content:
-              "🔒 **Ticket cerrado.**\n\n⏱️ Cerrar un ticket **no genera cooldown**."
-          }
-        );
+        await interaction.reply({
+          content:
+            [
+              "🔒 **Ticket cerrado.**",
+              "",
+              "⏱️ Cerrar un ticket **NO genera cooldown**."
+            ].join("\n")
+        });
 
         setTimeout(
           async () => {
 
-            try {
+            await interaction.channel.delete(
+              "Summer Tier List ticket closed"
+            ).catch(() => {});
 
-              await interaction.channel.delete(
-                "Summer Tier List ticket closed"
-              );
-
-            } catch {}
           },
           5000
         );
@@ -2751,7 +4506,9 @@ client.on(
         "❌ Error procesando interacción:"
       );
 
-      console.error(error);
+      console.error(
+        error
+      );
 
       try {
 
@@ -2817,6 +4574,9 @@ client.once(
           GUILD_ID
         );
 
+      await guild.channels.fetch();
+      await guild.roles.fetch();
+
       await setupServer(
         guild
       );
@@ -2839,4 +4599,7 @@ client.once(
    LOGIN
 ========================================================= */
 
-client.login(TOKEN);
+client.login(
+  TOKEN
+);
+```
