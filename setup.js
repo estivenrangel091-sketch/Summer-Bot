@@ -19,7 +19,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("setup")
     .setDescription("Crea y organiza toda la estructura de Summer Tier List.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator
+    ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
@@ -149,11 +151,11 @@ module.exports = {
               : "staff-logs";
 
       let channel = guild.channels.cache.find(
-        c =>
-          c.type === ChannelType.GuildText &&
+        channel =>
+          channel.type === ChannelType.GuildText &&
           (
-            c.name === data.name ||
-            c.name === oldName
+            channel.name === data.name ||
+            channel.name === oldName
           )
       );
 
