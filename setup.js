@@ -18,7 +18,7 @@ saveConfig
 module.exports = {
 data: new SlashCommandBuilder()
 .setName("setup")
-.setDescription("Crea toda la estructura de Summer Tier List.")
+.setDescription("Crea y organiza toda la estructura de Summer Tier List.")
 .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
 async execute(interaction) {
@@ -27,13 +27,14 @@ await interaction.deferReply({ ephemeral: true });
 ```
 const guild = interaction.guild;
 
-// =========================
+// ==========================================
 // CATEGORÍA PRINCIPAL
-// =========================
+// ==========================================
+
 let mainCategory = guild.channels.cache.find(
-  c =>
-    c.type === ChannelType.GuildCategory &&
-    c.name === "☀️ SUMMER TIER LIST"
+  channel =>
+    channel.type === ChannelType.GuildCategory &&
+    channel.name === "☀️ SUMMER TIER LIST"
 );
 
 if (!mainCategory) {
@@ -43,53 +44,74 @@ if (!mainCategory) {
   });
 }
 
-// =========================
+// ==========================================
 // WAITLISTS
-// =========================
+// ==========================================
+
 const waitlists = {};
 
 for (const mode of MODE_KEYS) {
   const info = modeInfo(mode);
-  const channelName = `${info.emoji}・${mode}-waitlist`;
 
+  const emojiName = `${info.emoji}・${mode}-waitlist`;
+
+  // Buscar tanto el nombre nuevo como el antiguo
   let channel = guild.channels.cache.find(
     c =>
       c.type === ChannelType.GuildText &&
-      c.name === channelName
+      (
+        c.name === emojiName ||
+        c.name === `${mode}-waitlist`
+      )
   );
 
   if (!channel) {
     channel = await guild.channels.create({
-      name: channelName,
+      name: emojiName,
       type: ChannelType.GuildText,
       parent: mainCategory.id
     });
-  } else if (channel.parentId !== mainCategory.id) {
-    await channel.setParent(mainCategory.id);
+  } else {
+    // RENOMBRAR SI EXISTÍA SIN EMOJI
+    if (channel.name !== emojiName) {
+      await channel.setName(emojiName);
+    }
+
+    // Mover a la categoría correcta
+    if (channel.parentId !== mainCategory.id) {
+      await channel.setParent(mainCategory.id);
+    }
   }
 
   waitlists[mode] = channel.id;
 
-  // Panel de waitlist
-  const messages = await channel.messages.fetch({ limit: 20 });
+  // ==========================================
+  // PANEL DE WAITLIST
+  // ==========================================
 
-  const alreadyHasPanel = messages.some(
-    m => m.author.id === interaction.client.user.id &&
-         m.embeds?.[0]?.title?.includes("WAITLIST")
+  const messages = await channel.messages.fetch({
+    limit: 50
+  });
+
+  const hasPanel = messages.some(
+    message =>
+      message.author.id === interaction.client.user.id &&
+      message.embeds.length > 0 &&
+      message.embeds[0].title?.includes("WAITLIST")
   );
 
-  if (!alreadyHasPanel) {
+  if (!hasPanel) {
     const embed = new EmbedBuilder()
       .setTitle(`${info.emoji} ${info.name} WAITLIST`)
       .setDescription(
-        "Únete a la lista para realizar tu test.\n\n" +
-        "Cuando un tester esté disponible, se abrirá tu test manualmente."
+        "Únete a la waitlist para realizar tu test.\n\n" +
+        "Cuando un tester esté disponible, tu test será atendido."
       )
       .setFooter({
         text: "Summer Tier List"
       });
 
-    const row = new ActionRowBuilder().addComponents(
+    const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`waitlist:join:${mode}`)
         .setLabel("Join")
@@ -111,50 +133,82 @@ for (const mode of MODE_KEYS) {
 
     await channel.send({
       embeds: [embed],
-      components: [row]
+      components: [buttons]
     });
   }
 }
 
-// =========================
+// ==========================================
 // CANALES GENERALES
-// =========================
-const normalChannels = {
-  results: "results",
-  highResults: "high-results",
-  support: "support",
-  logs: "staff-logs"
+// ==========================================
+
+const generalChannels = {
+  results: {
+    name: "📊・results"
+  },
+
+  highResults: {
+    name: "🏆・high-results"
+  },
+
+  support: {
+    name: "🆘・support"
+  },
+
+  logs: {
+    name: "📋・staff-logs"
+  }
 };
 
-const createdChannels = {};
+const channelIds = {};
 
-for (const [key, name] of Object.entries(normalChannels)) {
+for (const [key, data] of Object.entries(generalChannels)) {
+
+  // Buscar nombre con emoji O nombre antiguo
+  const oldName = key === "highResults"
+    ? "high-results"
+    : key === "results"
+      ? "results"
+      : key === "support"
+        ? "support"
+        : "staff-logs";
+
   let channel = guild.channels.cache.find(
     c =>
       c.type === ChannelType.GuildText &&
-      c.name === name
+      (
+        c.name === data.name ||
+        c.name === oldName
+      )
   );
 
   if (!channel) {
     channel = await guild.channels.create({
-      name,
+      name: data.name,
       type: ChannelType.GuildText,
       parent: mainCategory.id
     });
-  } else if (channel.parentId !== mainCategory.id) {
-    await channel.setParent(mainCategory.id);
+  } else {
+    if (channel.name !== data.name) {
+      await channel.setName(data.name);
+    }
+
+    if (channel.parentId !== mainCategory.id) {
+      await channel.setParent(mainCategory.id);
+    }
   }
 
-  createdChannels[key] = channel.id;
+  channelIds[key] = channel.id;
 }
 
-// =========================
+// ==========================================
 // CATEGORÍA DE TICKETS
-// =========================
+// ==========================================
+
 let ticketCategory = guild.channels.cache.find(
-  c =>
-    c.type === ChannelType.GuildCategory &&
-    c.name === "🎫 TICKETS"
+  channel =>
+    channel.type === ChannelType.GuildCategory &&
+    channel.name === "🎫 TICKETS"
 );
 
 if (!ticketCategory) {
@@ -164,41 +218,52 @@ if (!ticketCategory) {
   });
 }
 
-// =========================
+// ==========================================
 // PANEL DE TICKETS
-// =========================
+// ==========================================
+
 let ticketPanel = guild.channels.cache.find(
-  c =>
-    c.type === ChannelType.GuildText &&
-    c.name === "ticket-panel"
+  channel =>
+    channel.type === ChannelType.GuildText &&
+    (
+      channel.name === "🎫・ticket-panel" ||
+      channel.name === "ticket-panel"
+    )
 );
 
 if (!ticketPanel) {
   ticketPanel = await guild.channels.create({
-    name: "ticket-panel",
+    name: "🎫・ticket-panel",
     type: ChannelType.GuildText,
     parent: ticketCategory.id
   });
-} else if (ticketPanel.parentId !== ticketCategory.id) {
-  await ticketPanel.setParent(ticketCategory.id);
+} else {
+  if (ticketPanel.name !== "🎫・ticket-panel") {
+    await ticketPanel.setName("🎫・ticket-panel");
+  }
+
+  if (ticketPanel.parentId !== ticketCategory.id) {
+    await ticketPanel.setParent(ticketCategory.id);
+  }
 }
 
-const panelMessages = await ticketPanel.messages.fetch({
-  limit: 20
+const ticketMessages = await ticketPanel.messages.fetch({
+  limit: 50
 });
 
-const hasTicketPanel = panelMessages.some(
-  m =>
-    m.author.id === interaction.client.user.id &&
-    m.embeds?.[0]?.title?.includes("TICKETS")
+const hasTicketPanel = ticketMessages.some(
+  message =>
+    message.author.id === interaction.client.user.id &&
+    message.embeds.length > 0 &&
+    message.embeds[0].title?.includes("TICKETS")
 );
 
 if (!hasTicketPanel) {
   const embed = new EmbedBuilder()
     .setTitle("🎫 SUMMER TIER LIST — TICKETS")
     .setDescription(
-      "¿Necesitas ayuda?\n\n" +
-      "Pulsa el botón de abajo para abrir un ticket y selecciona el tipo de solicitud."
+      "Necesitas ayuda o quieres solicitar algo?\n\n" +
+      "Pulsa **Open Ticket** y selecciona el tipo de ticket."
     )
     .setFooter({
       text: "Summer Tier List"
@@ -218,9 +283,10 @@ if (!hasTicketPanel) {
   });
 }
 
-// =========================
+// ==========================================
 // GUARDAR CONFIG
-// =========================
+// ==========================================
+
 const config = getConfig();
 
 config.guildId = guild.id;
@@ -228,21 +294,32 @@ config.categoryId = mainCategory.id;
 config.ticketCategoryId = ticketCategory.id;
 
 config.channels.waitlists = waitlists;
-config.channels.results = createdChannels.results;
-config.channels.highResults = createdChannels.highResults;
-config.channels.support = createdChannels.support;
-config.channels.logs = createdChannels.logs;
+config.channels.results = channelIds.results;
+config.channels.highResults = channelIds.highResults;
+config.channels.support = channelIds.support;
+config.channels.logs = channelIds.logs;
 
 config.ticketPanelId = ticketPanel.id;
 
 saveConfig(config);
 
+// ==========================================
+// RESPUESTA
+// ==========================================
+
 await interaction.editReply(
-  "✅ **Setup completado.**\n\n" +
-  "☀️ Summer Tier List creada.\n" +
-  "🎫 Sistema de tickets creado.\n" +
-  "📝 Waitlists creadas.\n" +
-  "📊 Canales de resultados creados."
+  "☀️ **SUMMER TIER LIST — SETUP COMPLETADO**\n\n" +
+  "🟠 NetPot Waitlist\n" +
+  "🧪 UHC Waitlist\n" +
+  "⚔️ Sword Waitlist\n" +
+  "📦 BoxPvP Waitlist\n" +
+  "💎 CrystalPvP Waitlist\n\n" +
+  "📊 Results\n" +
+  "🏆 High Results\n" +
+  "🆘 Support\n" +
+  "📋 Staff Logs\n\n" +
+  "🎫 Ticket Panel\n\n" +
+  "✅ Los canales existentes también fueron renombrados."
 );
 ```
 
