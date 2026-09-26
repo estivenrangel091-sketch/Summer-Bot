@@ -7,26 +7,17 @@ ChannelType
 const fs = require("node:fs");
 const path = require("node:path");
 
-const CONFIG_FILE =
-path.join(__dirname, "config.json");
-
-const DB_FILE =
-path.join(__dirname, "database.json");
+const CONFIG_FILE = path.join(__dirname, "config.json");
+const DB_FILE = path.join(__dirname, "database.json");
 
 module.exports = {
 data: new SlashCommandBuilder()
 .setName("reset")
-.setDescription(
-"Elimina la estructura de Summer Tier List."
-)
-.setDefaultMemberPermissions(
-PermissionFlagsBits.Administrator
-),
+.setDescription("Elimina la estructura de Summer Tier List.")
+.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
 async execute(interaction) {
-await interaction.deferReply({
-ephemeral: true
-});
+await interaction.deferReply({ ephemeral: true });
 
 ```
 const guild = interaction.guild;
@@ -54,10 +45,12 @@ const oldChannels = [
   "high-results",
   "support",
   "staff-logs",
+
   "📊・results",
   "🏆・high-results",
   "🆘・support",
   "📋・staff-logs",
+
   "ticket-panel",
   "🎫・ticket-panel"
 ];
@@ -65,121 +58,38 @@ const oldChannels = [
 let deletedChannels = 0;
 let deletedCategories = 0;
 
-// Borrar categorías completas
+// Borrar categorías y sus canales
 for (const categoryName of categories) {
-  const category =
-    guild.channels.cache.find(
-      channel =>
-        channel.type ===
-          ChannelType.GuildCategory &&
-        channel.name === categoryName
-    );
+  const category = guild.channels.cache.find(
+    channel =>
+      channel.type === ChannelType.GuildCategory &&
+      channel.name === categoryName
+  );
 
   if (!category) continue;
 
-  const children =
-    guild.channels.cache.filter(
-      channel =>
-        channel.parentId === category.id
-    );
+  const children = guild.channels.cache.filter(
+    channel => channel.parentId === category.id
+  );
 
   for (const channel of children.values()) {
     try {
-      await channel.delete(
-        "Summer Tier List reset"
-      );
-
+      await channel.delete("Summer Tier List reset");
       deletedChannels++;
-    } catch {}
+    } catch (error) {
+      console.error(`No se pudo borrar ${channel.name}:`, error);
+    }
   }
 
   try {
-    await category.delete(
-      "Summer Tier List reset"
-    );
-
+    await category.delete("Summer Tier List reset");
     deletedCategories++;
-  } catch {}
-}
-
-// Borrar canales viejos que estén fuera
-for (const name of oldChannels) {
-  const channels =
-    guild.channels.cache.filter(
-      channel =>
-        channel.type === ChannelType.GuildText &&
-        channel.name === name
-    );
-
-  for (const channel of channels.values()) {
-    try {
-      await channel.delete(
-        "Summer Tier List reset"
-      );
-
-      deletedChannels++;
-    } catch {}
+  } catch (error) {
+    console.error(`No se pudo borrar ${category.name}:`, error);
   }
 }
 
-// Reset de configuración
-const config = {
-  guildId: "",
-  categoryId: "",
-  ticketCategoryId: "",
-  ticketPanelId: "",
-
-  channels: {
-    waitlists: {},
-    results: "",
-    highResults: "",
-    support: "",
-    applications: "",
-    logs: ""
-  },
-
-  roles: {}
-};
-
-fs.writeFileSync(
-  CONFIG_FILE,
-  JSON.stringify(config, null, 2),
-  "utf8"
-);
-
-// Reset de base de datos
-const database = {
-  waitlists: {
-    netpot: [],
-    uhc: [],
-    sword: [],
-    boxpvp: [],
-    crystalpvp: []
-  },
-
-  cooldowns: {},
-  profiles: {},
-  results: [],
-  highResults: [],
-  applications: [],
-  tickets: []
-};
-
-fs.writeFileSync(
-  DB_FILE,
-  JSON.stringify(database, null, 2),
-  "utf8"
-);
-
-await interaction.editReply(
-  "🧹 **RESET COMPLETADO**\n\n" +
-  `🗑️ Canales eliminados: **${deletedChannels}**\n` +
-  `📁 Categorías eliminadas: **${deletedCategories}**\n` +
-  "💾 Configuración reiniciada.\n" +
-  "🗄️ Base de datos reiniciada.\n\n" +
-  "Ahora ejecuta **/setup**."
-);
+// Borrar canales antiguos que estén fuera de las categorías
+for (const name of oldChannels) {
+  const channels =
 ```
-
-}
-};
