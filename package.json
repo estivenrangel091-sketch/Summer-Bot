@@ -4,8 +4,7 @@
   "description": "Summer Tier List Minecraft PvP Discord bot",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "deploy": "node deploy-commands.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "discord.js": "^14.24.2",
