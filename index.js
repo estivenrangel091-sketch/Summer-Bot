@@ -380,10 +380,7 @@ function getModeName(mode) {
   return MODES[mode]?.name || mode;
 }
 
-function getCooldownKey(
-  userId,
-  mode
-) {
+function getCooldownKey(userId, mode) {
   return `${userId}:${mode}`;
 }
 
