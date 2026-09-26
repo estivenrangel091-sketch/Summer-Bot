@@ -4,7 +4,6 @@ PermissionFlagsBits
 } = require("discord.js");
 
 const STAFF_ROLES = [
-// STAFF PRINCIPAL
 {
 name: "👑 Owner",
 color: 0xF1C40F,
@@ -20,8 +19,6 @@ name: "🔨 Moderator",
 color: 0xE67E22,
 hoist: true
 },
-
-// TESTING
 {
 name: "💎 Tierlist Manager",
 color: 0x00BFFF,
@@ -47,15 +44,11 @@ name: "📋 Trial Tester",
 color: 0x1ABC9C,
 hoist: true
 },
-
-// SOPORTE
 {
 name: "🎫 Support",
 color: 0x2ECC71,
 hoist: true
 },
-
-// OTROS
 {
 name: "🧑‍💻 Developer",
 color: 0x34495E,
@@ -77,14 +70,10 @@ module.exports = {
 data: new SlashCommandBuilder()
 .setName("staffsetup")
 .setDescription("Crea todos los rangos de Summer Tier List.")
-.setDefaultMemberPermissions(
-PermissionFlagsBits.Administrator
-),
+.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
 async execute(interaction) {
-await interaction.deferReply({
-ephemeral: true
-});
+await interaction.deferReply({ ephemeral: true });
 
 ```
 const guild = interaction.guild;
@@ -93,10 +82,9 @@ const created = [];
 const existing = [];
 
 for (const roleData of STAFF_ROLES) {
-  const existingRole =
-    guild.roles.cache.find(
-      role => role.name === roleData.name
-    );
+  const existingRole = guild.roles.cache.find(
+    role => role.name === roleData.name
+  );
 
   if (existingRole) {
     existing.push(existingRole.name);
@@ -109,8 +97,7 @@ for (const roleData of STAFF_ROLES) {
       color: roleData.color,
       hoist: roleData.hoist,
       mentionable: true,
-      reason:
-        "Summer Tier List staff roles"
+      reason: "Summer Tier List staff roles"
     });
 
     created.push(roleData.name);
@@ -126,7 +113,6 @@ await interaction.editReply(
   "👥 **STAFF ROLES CONFIGURADOS**\n\n" +
   `✅ Creados: **${created.length}**\n` +
   `♻️ Ya existentes: **${existing.length}**\n\n` +
-  "Rangos configurados:\n" +
   "👑 Owner\n" +
   "🛡️ Administrator\n" +
   "🔨 Moderator\n" +
