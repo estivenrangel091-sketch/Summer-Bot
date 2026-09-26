@@ -5,182 +5,148 @@ const DB_FILE = path.join(__dirname, "database.json");
 const CONFIG_FILE = path.join(__dirname, "config.json");
 
 const MODES = {
-  netpot: {
-    name: "NetPot",
-    emoji: "🟠"
-  },
-
-  uhc: {
-    name: "UHC",
-    emoji: "🧪"
-  },
-
-  sword: {
-    name: "Sword",
-    emoji: "⚔️"
-  },
-
-  boxpvp: {
-    name: "BoxPvP",
-    emoji: "📦"
-  },
-
-  crystalpvp: {
-    name: "CrystalPvP",
-    emoji: "💎"
-  }
+netpot: { name: "NetPot", emoji: "🟠" },
+uhc: { name: "UHC", emoji: "🧪" },
+sword: { name: "Sword", emoji: "⚔️" },
+boxpvp: { name: "BoxPvP", emoji: "📦" },
+crystalpvp: { name: "CrystalPvP", emoji: "💎" }
 };
 
 const MODE_KEYS = Object.keys(MODES);
 
 const TIERS = [
-  "HT1",
-  "LT1",
-  "HT2",
-  "LT2",
-  "HT3",
-  "LT3",
-  "HT4",
-  "LT4",
-  "HT5",
-  "LT5"
+"HT1", "LT1",
+"HT2", "LT2",
+"HT3", "LT3",
+"HT4", "LT4",
+"HT5", "LT5"
 ];
 
+const COOLDOWN = 3 * 24 * 60 * 60 * 1000;
+
 function readJSON(file, fallback) {
+try {
+if (!fs.existsSync(file)) return fallback;
 
-  try {
+```
+const data = fs.readFileSync(file, "utf8");
 
-    return JSON.parse(
-      fs.readFileSync(file, "utf8")
-    );
+if (!data.trim()) return fallback;
 
-  } catch {
+return JSON.parse(data);
+```
 
-    return fallback;
-  }
+} catch {
+return fallback;
+}
 }
 
 function writeJSON(file, data) {
-
-  fs.writeFileSync(
-    file,
-    JSON.stringify(data, null, 2)
-  );
+fs.writeFileSync(
+file,
+JSON.stringify(data, null, 2),
+"utf8"
+);
 }
 
 function getDB() {
+const db = readJSON(DB_FILE, {});
 
-  const db = readJSON(DB_FILE, {});
+db.waitlists ??= {};
+db.cooldowns ??= {};
+db.profiles ??= {};
+db.results ??= [];
+db.highResults ??= [];
+db.applications ??= [];
+db.tickets ??= [];
 
-  db.waitlists ??= {};
-  db.cooldowns ??= {};
-  db.profiles ??= {};
-  db.results ??= [];
-  db.highResults ??= [];
-  db.applications ??= [];
-  db.tickets ??= [];
+for (const mode of MODE_KEYS) {
+db.waitlists[mode] ??= [];
+}
 
-  for (const mode of MODE_KEYS) {
-    db.waitlists[mode] ??= [];
-  }
-
-  return db;
+return db;
 }
 
 function saveDB(db) {
-  writeJSON(DB_FILE, db);
+writeJSON(DB_FILE, db);
 }
 
 function getConfig() {
+const config = readJSON(CONFIG_FILE, {});
 
-  const config = readJSON(CONFIG_FILE, {});
+config.guildId ??= "";
+config.categoryId ??= "";
+config.ticketCategoryId ??= "";
+config.ticketPanelId ??= "";
 
-  config.guildId ??= "";
-  config.categoryId ??= "";
-  config.ticketCategoryId ??= "";
+config.channels ??= {};
+config.channels.waitlists ??= {};
+config.channels.results ??= "";
+config.channels.highResults ??= "";
+config.channels.support ??= "";
+config.channels.applications ??= "";
+config.channels.logs ??= "";
 
-  config.channels ??= {};
-  config.channels.waitlists ??= {};
-  config.channels.results ??= "";
-  config.channels.highResults ??= "";
-  config.channels.support ??= "";
-  config.channels.applications ??= "";
-  config.channels.logs ??= "";
+config.roles ??= {};
 
-  config.roles ??= {};
-
-  return config;
+return config;
 }
 
 function saveConfig(config) {
-  writeJSON(CONFIG_FILE, config);
+writeJSON(CONFIG_FILE, config);
 }
 
 function modeInfo(mode) {
-  return (
-    MODES[mode] || {
-      name: mode,
-      emoji: "🎮"
-    }
-  );
+return MODES[mode] || {
+name: mode,
+emoji: "🎮"
+};
 }
 
 function cooldownKey(userId, mode) {
-  return `${userId}:${mode}`;
+return `${userId}:${mode}`;
 }
 
 function setCooldown(
-  db,
-  userId,
-  mode,
-  duration = 3 * 24 * 60 * 60 * 1000
+db,
+userId,
+mode,
+duration = COOLDOWN
 ) {
+db.cooldowns ??= {};
 
-  db.cooldowns ??= {};
+db.cooldowns[cooldownKey(userId, mode)] =
+Date.now() + duration;
 
-  db.cooldowns[cooldownKey(userId, mode)] =
-    Date.now() + duration;
-
-  saveDB(db);
+saveDB(db);
 }
 
 function getCooldown(db, userId, mode) {
-
-  return (
-    db.cooldowns?.[
-      cooldownKey(userId, mode)
-    ] || 0
-  );
+return db.cooldowns?.[
+cooldownKey(userId, mode)
+] || 0;
 }
 
-function removeFromWaitlist(
-  db,
-  userId,
-  mode
-) {
+function removeFromWaitlist(db, userId, mode) {
+if (!db.waitlists?.[mode]) return;
 
-  if (!db.waitlists?.[mode]) return;
-
-  db.waitlists[mode] =
-    db.waitlists[mode].filter(
-      id => id !== userId
-    );
+db.waitlists[mode] =
+db.waitlists[mode].filter(
+id => id !== userId
+);
 }
 
 module.exports = {
-  MODES,
-  MODE_KEYS,
-  TIERS,
-  modeInfo,
-
-  getDB,
-  saveDB,
-
-  getConfig,
-  saveConfig,
-
-  setCooldown,
-  getCooldown,
-
-  removeFromWaitlist
+MODES,
+MODE_KEYS,
+TIERS,
+COOLDOWN,
+modeInfo,
+getDB,
+saveDB,
+getConfig,
+saveConfig,
+setCooldown,
+getCooldown,
+removeFromWaitlist
 };
