@@ -53,11 +53,12 @@ const commandFiles = [
 ];
 
 const loadedCommands = new Set();
+const commandSources = new Map();
 
 for (const file of commandFiles) {
   try {
     if (loadedCommands.has(file)) {
-      console.log(`⚠️ Comando duplicado ignorado: ${file}`);
+      console.log(`⚠️ Archivo duplicado ignorado: ${file}`);
       continue;
     }
 
@@ -73,20 +74,30 @@ for (const file of commandFiles) {
     const commandName = command.data.name;
 
     if (client.commands.has(commandName)) {
-      console.log(`⚠️ /${commandName} duplicado ignorado`);
+      const previousFile = commandSources.get(commandName);
+
+      console.log("");
+      console.log("================================");
+      console.log(`❌ COMANDO DUPLICADO DETECTADO`);
+      console.log(`Comando: /${commandName}`);
+      console.log(`Archivo anterior: ${previousFile}`);
+      console.log(`Archivo duplicado: ${file}`);
+      console.log("================================");
+      console.log("");
+
       continue;
     }
 
     client.commands.set(commandName, command);
+    commandSources.set(commandName, file);
 
-    console.log(`Preparado: ${commandName}`);
+    console.log(`Preparado: /${commandName} ← ${file}`);
 
   } catch (error) {
-    console.error(`Error cargando ${file}`);
+    console.error(`❌ Error cargando ${file}`);
     console.error(error);
   }
 }
-
 /* =========================
    READY
 ========================= */
