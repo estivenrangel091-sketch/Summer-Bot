@@ -1,0 +1,14 @@
+{
+  "name": "summer-tier-list",
+  "version": "1.0.0",
+  "description": "Summer Tier List Minecraft PvP Discord bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.24.2",
+    "dotenv": "^16.6.1"
+  }
+}
