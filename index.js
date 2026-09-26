@@ -1,764 +1,672 @@
 require("dotenv").config();
 
-const fs = require("node:fs");
-const path = require("node:path");
 const {
-  Client, Collection, GatewayIntentBits, Events, ChannelType,
-  PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder,
-  ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle
+  Client,
+  Collection,
+  GatewayIntentBits,
+  Events,
+  ChannelType,
+  PermissionFlagsBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } = require("discord.js");
 
+const {
+  MODE_KEYS,
+  modeInfo,
+  getConfig,
+  saveConfig,
+  getDB,
+  saveDB,
+  setCooldown,
+  getCooldown
+} = require("./botData");
+
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
+  intents: [GatewayIntentBits.Guilds]
 });
 
 client.commands = new Collection();
 
-// Archivos directamente en la raíz del proyecto
-const DB_FILE = path.join(__dirname, "database.json");
-const CONFIG_FILE = path.join(__dirname, "config.json");
+/* =========================
+   COMANDOS
+========================= */
 
-function read(file, fallback) {
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return fallback;
-  }
-}
-
-function write(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
-function getDB() {
-  return read(DB_FILE, {
-    waitlists: {
-      netpot: [],
-      uhc: [],
-      sword: [],
-      boxpvp: [],
-      crystalpvp: []
-    },
-    cooldowns: {},
-    profiles: {},
-    results: [],
-    highResults: [],
-    applications: [],
-    tickets: []
-  });
-}
-
-function getConfig() {
-  return read(CONFIG_FILE, {
-    guildId: "",
-    categoryId: "",
-    channels: {
-      waitlists: {},
-      results: "",
-      highResults: "",
-      support: "",
-      applications: "",
-      logs: ""
-    },
-    roles: {}
-  });
-}
-
-function saveDB(db) {
-  write(DB_FILE, db);
-}
-
-function saveConfig(c) {
-  write(CONFIG_FILE, c);
-}
-
-const MODES = {
-  netpot: { name: "NetPot", emoji: "🟠" },
-  uhc: { name: "UHC", emoji: "🧪" },
-  sword: { name: "Sword", emoji: "⚔️" },
-  boxpvp: { name: "BoxPvP", emoji: "📦" },
-  crystalpvp: { name: "CrystalPvP", emoji: "💎" }
-};
-
-const TIERS = [
-  "HT1",
-  "LT1",
-  "HT2",
-  "LT2",
-  "HT3",
-  "LT3",
-  "HT4",
-  "LT4",
-  "HT5",
-  "LT5"
-];
-
-const MODE_KEYS = Object.keys(MODES);
-
-function modeInfo(mode) {
-  return MODES[mode] || {
-    name: mode,
-    emoji: "🎮"
-  };
-}
-
-/*
- * CARGAR COMANDOS DESDE LA RAÍZ
- * Tus archivos .js están directamente en Summer-Bot/
- */
 const commandFiles = [
-  "apply.js",
-  "highresults.js",
   "ping.js",
-  "profile.js",
-  "queue.js",
-  "result.js",
-  "results.js",
   "setup.js",
+  "support.js",
   "setupwaitlist.js",
-  "support.js"
+  "result.js",
+  "highresults.js",
+  "results.js",
+  "queue.js",
+  "profile.js"
 ];
 
 for (const file of commandFiles) {
-  const filePath = path.join(__dirname, file);
-
-  if (!fs.existsSync(filePath)) {
-    console.warn(`⚠️ No se encontró el comando: ${file}`);
-    continue;
-  }
-
   try {
-    const command = require(filePath);
+    const command = require(`./${file}`);
 
-    if (command.data && command.execute) {
+    if (command?.data?.name) {
       client.commands.set(command.data.name, command);
-      console.log(`✅ Comando cargado: ${command.data.name}`);
-    } else {
-      console.warn(`⚠️ ${file} no tiene data o execute.`);
+      console.log(`Preparado: ${command.data.name}`);
     }
   } catch (error) {
-    console.error(`❌ Error cargando ${file}:`, error);
+    console.error(`Error cargando ${file}`);
+    console.error(error);
   }
 }
 
-function waitEmbed(mode, db) {
-  const info = modeInfo(mode);
-  const q = db.waitlists[mode] || [];
+/* =========================
+   READY
+========================= */
 
-  const list = q.length
-    ? q.map((id, i) => `**${i + 1}.** <@${id}>`).join("\n")
-    : "*The waitlist is currently empty.*";
+client.once(Events.ClientReady, () => {
+  console.log(`☀️ Summer Tier List online como ${client.user.tag}`);
+});
 
-  return new EmbedBuilder()
-    .setColor(0x2f8cff)
-    .setTitle("☀️ SUMMER TIER LIST")
-    .setDescription(
-      `**${info.emoji} ${info.name.toUpperCase()} WAITLIST**\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `Official ${info.name} testing queue.\n\n` +
-      `👥 **Players waiting:** ${q.length}\n` +
-      `🟢 **Status:** OPEN\n\n` +
-      `### Queue\n${list}`
-    )
-    .setFooter({
-      text: "Summer Tier List • Official Testing"
-    })
-    .setTimestamp();
-}
+/* =========================
+   INTERACCIONES
+========================= */
 
-function waitButtons(mode) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`join:${mode}`)
-      .setLabel("Join Waitlist")
-      .setEmoji("➕")
-      .setStyle(ButtonStyle.Success),
+client.on(Events.InteractionCreate, async interaction => {
+  try {
 
-    new ButtonBuilder()
-      .setCustomId(`leave:${mode}`)
-      .setLabel("Leave Waitlist")
-      .setEmoji("➖")
-      .setStyle(ButtonStyle.Danger),
+    /* =========================
+       SLASH COMMANDS
+    ========================= */
 
-    new ButtonBuilder()
-      .setCustomId(`queue:${mode}`)
-      .setLabel("View Queue")
-      .setEmoji("📋")
-      .setStyle(ButtonStyle.Secondary)
-  );
-}
+    if (interaction.isChatInputCommand()) {
 
-async function refreshWaitlist(guild, mode) {
-  const c = getConfig();
-  const id = c.channels?.waitlists?.[mode];
+      const command = client.commands.get(interaction.commandName);
 
-  if (!id) return;
+      if (!command) return;
 
-  const ch = guild.channels.cache.get(id);
-
-  if (!ch) return;
-
-  const msgs = await ch.messages.fetch({
-    limit: 30
-  }).catch(() => null);
-
-  if (!msgs) return;
-
-  const msg = msgs.find(
-    m =>
-      m.author.id === client.user.id &&
-      m.embeds[0]?.title === "☀️ SUMMER TIER LIST"
-  );
-
-  const payload = {
-    embeds: [waitEmbed(mode, getDB())],
-    components: [waitButtons(mode)]
-  };
-
-  if (msg) {
-    await msg.edit(payload).catch(() => {});
-  } else {
-    await ch.send(payload).catch(() => {});
-  }
-}
-
-async function refreshAllWaitlists(guild) {
-  for (const mode of MODE_KEYS) {
-    await refreshWaitlist(guild, mode);
-  }
-}
-
-async function setupGuild(guild) {
-  const config = getConfig();
-
-  let category = guild.channels.cache.get(config.categoryId);
-
-  if (!category || category.type !== ChannelType.GuildCategory) {
-    category = await guild.channels.create({
-      name: "☀️ SUMMER TIER LIST",
-      type: ChannelType.GuildCategory
-    });
-  }
-
-  config.guildId = guild.id;
-  config.categoryId = category.id;
-
-  config.channels.waitlists =
-    config.channels.waitlists || {};
-
-  for (const mode of MODE_KEYS) {
-    let ch = guild.channels.cache.get(
-      config.channels.waitlists[mode]
-    );
-
-    if (!ch) {
-      ch = await guild.channels.create({
-        name: `${mode}-waitlist`,
-        type: ChannelType.GuildText,
-        parent: category.id,
-        topic: `☀️ Summer Tier List — ${modeInfo(mode).name} official waitlist`
-      });
+      await command.execute(interaction);
+      return;
     }
 
-    config.channels.waitlists[mode] = ch.id;
-  }
+    /* =========================
+       OPEN TICKET
+    ========================= */
 
-  async function ensureChannel(key, name) {
-    let ch = guild.channels.cache.get(config.channels[key]);
+    if (
+      interaction.isButton() &&
+      interaction.customId === "support:open"
+    ) {
 
-    if (!ch) {
-      ch = await guild.channels.create({
-        name,
-        type: ChannelType.GuildText,
-        parent: category.id
-      });
-    }
+      const menu = new StringSelectMenuBuilder()
+        .setCustomId("ticket:type")
+        .setPlaceholder("Selecciona el tipo de ticket")
+        .addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel("Support")
+            .setDescription("Ayuda general o problemas")
+            .setEmoji("🛡️")
+            .setValue("support"),
 
-    config.channels[key] = ch.id;
-    return ch;
-  }
+          new StringSelectMenuOptionBuilder()
+            .setLabel("Tester Application")
+            .setDescription("Aplicar para Tester")
+            .setEmoji("🧪")
+            .setValue("tester"),
 
-  await ensureChannel("results", "results");
-  await ensureChannel("highResults", "high-results");
-  await ensureChannel("support", "support");
-  await ensureChannel("applications", "applications");
-  await ensureChannel("logs", "staff-logs");
+          new StringSelectMenuOptionBuilder()
+            .setLabel("Staff Application")
+            .setDescription("Aplicar para Staff")
+            .setEmoji("👑")
+            .setValue("staff"),
 
-  saveConfig(config);
-
-  await refreshAllWaitlists(guild);
-
-  return (
-    `☀️ **Summer Tier List configurado.**\n\n` +
-    `Waitlists independientes creadas: ` +
-    `${MODE_KEYS.map(m => `#${m}-waitlist`).join(", ")}\n\n` +
-    `🏆 #results\n` +
-    `🔥 #high-results\n` +
-    `🛡️ #support\n` +
-    `📋 #applications\n` +
-    `📜 #staff-logs`
-  );
-}
-
-async function createTicket(interaction, type) {
-  const config = getConfig();
-
-  const category = guildCategory(
-    interaction.guild,
-    "☀️ SUPPORT"
-  );
-
-  const safe =
-    interaction.user.username
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "")
-      .slice(0, 15) || "player";
-
-  const ch = await interaction.guild.channels.create({
-    name: `${type}-${safe}`,
-    type: ChannelType.GuildText,
-    parent: category?.id || null,
-
-    permissionOverwrites: [
-      {
-        id: interaction.guild.roles.everyone.id,
-        deny: [PermissionFlagsBits.ViewChannel]
-      },
-      {
-        id: interaction.user.id,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.ReadMessageHistory
-        ]
-      }
-    ]
-  });
-
-  const staffRoles = [
-    "tester",
-    "staff",
-    "highStaff"
-  ]
-    .map(k => config.roles[k])
-    .filter(Boolean);
-
-  for (const roleId of staffRoles) {
-    await ch.permissionOverwrites
-      .create(roleId, {
-        ViewChannel: true,
-        SendMessages: true,
-        ReadMessageHistory: true
-      })
-      .catch(() => {});
-  }
-
-  const title =
-    type === "high"
-      ? "🔥 HIGH TEST REQUEST"
-      : "🛡️ SUPPORT TICKET";
-
-  const embed = new EmbedBuilder()
-    .setColor(
-      type === "high"
-        ? 0xf5b642
-        : 0x2f8cff
-    )
-    .setTitle(
-      `☀️ SUMMER TIER LIST\n${title}`
-    )
-    .setDescription(
-      `━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `👤 **Player:** <@${interaction.user.id}>\n` +
-      `📌 **Type:** ${
-        type === "high"
-          ? "High Test"
-          : "Support"
-      }\n\n` +
-      (
-        type === "high"
-          ? `A High Test is requested through Support. Staff/authorized testers will review this ticket and handle the test.\n\n`
-          : `Please explain your issue and wait for a staff member.\n\n`
-      ) +
-      `🔒 Use the button below when the ticket is finished.`
-    );
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("ticket:close")
-      .setLabel("Close Ticket")
-      .setEmoji("🔒")
-      .setStyle(ButtonStyle.Danger)
-  );
-
-  await ch.send({
-    content: `<@${interaction.user.id}>`,
-    embeds: [embed],
-    components: [row]
-  });
-
-  const db = getDB();
-
-  db.tickets.push({
-    channelId: ch.id,
-    userId: interaction.user.id,
-    type,
-    createdAt: Date.now()
-  });
-
-  saveDB(db);
-
-  return ch;
-}
-
-function guildCategory(guild, name) {
-  return guild.channels.cache.find(
-    c =>
-      c.type === ChannelType.GuildCategory &&
-      c.name === name
-  );
-}
-
-async function showApplicationModal(interaction, type) {
-  const modal = new ModalBuilder()
-    .setCustomId(`apply:${type}`)
-    .setTitle(
-      `${
-        type === "tester"
-          ? "Tester"
-          : type === "hightester"
-          ? "High Tester"
-          : "Staff"
-      } Application`
-    );
-
-  const fields =
-    type === "staff"
-      ? [
-          ["age", "Age", "Your age", false],
-          ["ign", "Minecraft IGN", "Minecraft username", true],
-          ["experience", "Experience", "Previous staff/testing experience", true],
-          ["why", "Why you?", "Why should we choose you?", true]
-        ]
-      : [
-          ["ign", "Minecraft IGN", "Minecraft username", true],
-          ["region", "Region", "NA / EU / AS / LATAM / OCE", true],
-          ["experience", "Experience", "PvP/testing experience", true],
-          ["why", "Why you?", "Why should you become a tester?", true]
-        ];
-
-  const rows = fields.map(
-    ([id, label, ph, req]) =>
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId(id)
-          .setLabel(label)
-          .setPlaceholder(ph)
-          .setRequired(req)
-          .setStyle(
-            id === "why" || id === "experience"
-              ? TextInputStyle.Paragraph
-              : TextInputStyle.Short
-          )
-      )
-  );
-
-  modal.addComponents(...rows.slice(0, 5));
-
-  await interaction.showModal(modal);
-}
-
-client.on(
-  Events.InteractionCreate,
-  async interaction => {
-    try {
-      if (interaction.isChatInputCommand()) {
-        const cmd = client.commands.get(
-          interaction.commandName
+          new StringSelectMenuOptionBuilder()
+            .setLabel("High Test")
+            .setDescription("Solicitar un High Test")
+            .setEmoji("🔥")
+            .setValue("high")
         );
 
-        if (cmd) {
-          await cmd.execute(interaction);
-        }
+      const row = new ActionRowBuilder().addComponents(menu);
+
+      await interaction.reply({
+        content: "🎫 **Selecciona el tipo de ticket que deseas abrir:**",
+        components: [row],
+        ephemeral: true
+      });
+
+      return;
+    }
+
+    /* =========================
+       TICKET TYPE
+    ========================= */
+
+    if (
+      interaction.isStringSelectMenu() &&
+      interaction.customId === "ticket:type"
+    ) {
+
+      const type = interaction.values[0];
+
+      const config = getConfig();
+      const db = getDB();
+
+      const guild = interaction.guild;
+
+      if (!guild) return;
+
+      let category = guild.channels.cache.find(
+        c =>
+          c.type === ChannelType.GuildCategory &&
+          c.name === "🎫 TICKETS"
+      );
+
+      if (!category) {
+        category = await guild.channels.create({
+          name: "🎫 TICKETS",
+          type: ChannelType.GuildCategory
+        });
+      }
+
+      const existing = guild.channels.cache.find(
+        c =>
+          c.parentId === category.id &&
+          c.topic === `ticket-owner:${interaction.user.id}`
+      );
+
+      if (existing) {
+        await interaction.reply({
+          content: `❌ Ya tienes un ticket abierto: ${existing}`,
+          ephemeral: true
+        });
+        return;
+      }
+
+      const names = {
+        support: "support",
+        tester: "tester-application",
+        staff: "staff-application",
+        high: "high-test"
+      };
+
+      const channel = await guild.channels.create({
+        name: `${names[type]}-${interaction.user.username}`
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, "")
+          .slice(0, 90),
+
+        type: ChannelType.GuildText,
+
+        parent: category.id,
+
+        topic: `ticket-owner:${interaction.user.id}`,
+
+        permissionOverwrites: [
+          {
+            id: guild.roles.everyone.id,
+            deny: [PermissionFlagsBits.ViewChannel]
+          },
+          {
+            id: interaction.user.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory
+            ]
+          }
+        ]
+      });
+
+      const testerRole = guild.roles.cache.find(
+        r => r.name === "Summer Tester"
+      );
+
+      const staffRole = guild.roles.cache.find(
+        r => r.name === "Summer Staff"
+      );
+
+      const highRole = guild.roles.cache.find(
+        r => r.name === "Summer High Staff"
+      );
+
+      if (testerRole) {
+        await channel.permissionOverwrites.create(testerRole, {
+          ViewChannel: true,
+          SendMessages: true,
+          ReadMessageHistory: true
+        });
+      }
+
+      if (staffRole) {
+        await channel.permissionOverwrites.create(staffRole, {
+          ViewChannel: true,
+          SendMessages: true,
+          ReadMessageHistory: true
+        });
+      }
+
+      if (highRole) {
+        await channel.permissionOverwrites.create(highRole, {
+          ViewChannel: true,
+          SendMessages: true,
+          ReadMessageHistory: true
+        });
+      }
+
+      const closeButton = new ButtonBuilder()
+        .setCustomId("ticket:close")
+        .setLabel("Cerrar Ticket")
+        .setEmoji("🔒")
+        .setStyle(ButtonStyle.Danger);
+
+      const buttons = [
+        new ActionRowBuilder().addComponents(closeButton)
+      ];
+
+      let description = "";
+
+      if (type === "support") {
+        description =
+          "Describe tu problema o pregunta y un miembro del staff te ayudará.";
+      }
+
+      if (type === "tester") {
+        description =
+          "Para aplicar como Tester, pulsa el botón de abajo y completa la aplicación.";
+      }
+
+      if (type === "staff") {
+        description =
+          "Para aplicar como Staff, pulsa el botón de abajo y completa la aplicación.";
+      }
+
+      if (type === "high") {
+        description =
+          "Explica por qué deseas realizar un High Test. Un miembro autorizado revisará tu solicitud.";
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${type === "high" ? "🔥" : "🎫"} Summer Tier List`)
+        .setDescription(description)
+        .setColor(0xF1C40F)
+        .setFooter({
+          text: "Summer Tier List"
+        });
+
+      const components = [...buttons];
+
+      if (type === "tester" || type === "staff") {
+
+        const applyButton = new ButtonBuilder()
+          .setCustomId(`ticket:application:${type}`)
+          .setLabel(
+            type === "tester"
+              ? "Completar aplicación de Tester"
+              : "Completar aplicación de Staff"
+          )
+          .setEmoji(type === "tester" ? "🧪" : "👑")
+          .setStyle(ButtonStyle.Primary);
+
+        components.unshift(
+          new ActionRowBuilder().addComponents(applyButton)
+        );
+      }
+
+      await channel.send({
+        content: `<@${interaction.user.id}>`,
+        embeds: [embed],
+        components
+      });
+
+      db.tickets ??= [];
+
+      db.tickets.push({
+        channelId: channel.id,
+        userId: interaction.user.id,
+        type,
+        createdAt: Date.now(),
+        closed: false
+      });
+
+      saveDB(db);
+
+      await interaction.reply({
+        content: `✅ Ticket creado correctamente: ${channel}`,
+        ephemeral: true
+      });
+
+      return;
+    }
+
+    /* =========================
+       APPLICATION BUTTON
+    ========================= */
+
+    if (
+      interaction.isButton() &&
+      interaction.customId.startsWith("ticket:application:")
+    ) {
+
+      const type = interaction.customId.split(":")[2];
+
+      const modal = new ModalBuilder()
+        .setCustomId(`application:${type}`)
+        .setTitle(
+          type === "tester"
+            ? "Tester Application"
+            : "Staff Application"
+        );
+
+      const username = new TextInputBuilder()
+        .setCustomId("minecraft")
+        .setLabel("Minecraft Username")
+        .setPlaceholder("Tu nombre de Minecraft")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const experience = new TextInputBuilder()
+        .setCustomId("experience")
+        .setLabel("Experiencia")
+        .setPlaceholder("Cuéntanos sobre tu experiencia")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      const reason = new TextInputBuilder()
+        .setCustomId("reason")
+        .setLabel("¿Por qué quieres entrar?")
+        .setPlaceholder("Explica tu motivo")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(username),
+        new ActionRowBuilder().addComponents(experience),
+        new ActionRowBuilder().addComponents(reason)
+      );
+
+      await interaction.showModal(modal);
+      return;
+    }
+
+    /* =========================
+       APPLICATION SUBMIT
+    ========================= */
+
+    if (
+      interaction.isModalSubmit() &&
+      interaction.customId.startsWith("application:")
+    ) {
+
+      const type = interaction.customId.split(":")[1];
+
+      const minecraft = interaction.fields.getTextInputValue("minecraft");
+      const experience = interaction.fields.getTextInputValue("experience");
+      const reason = interaction.fields.getTextInputValue("reason");
+
+      const db = getDB();
+
+      db.applications ??= [];
+
+      db.applications.push({
+        userId: interaction.user.id,
+        type,
+        minecraft,
+        experience,
+        reason,
+        createdAt: Date.now()
+      });
+
+      saveDB(db);
+
+      const embed = new EmbedBuilder()
+        .setTitle(
+          type === "tester"
+            ? "🧪 Tester Application"
+            : "👑 Staff Application"
+        )
+        .addFields(
+          {
+            name: "Minecraft",
+            value: minecraft
+          },
+          {
+            name: "Experiencia",
+            value: experience
+          },
+          {
+            name: "Motivo",
+            value: reason
+          }
+        )
+        .setFooter({
+          text: `Aplicación de ${interaction.user.tag}`
+        })
+        .setTimestamp();
+
+      await interaction.channel.send({
+        embeds: [embed]
+      });
+
+      await interaction.reply({
+        content: "✅ Tu aplicación fue enviada dentro del ticket.",
+        ephemeral: true
+      });
+
+      return;
+    }
+
+    /* =========================
+       JOIN WAITLIST
+    ========================= */
+
+    if (
+      interaction.isButton() &&
+      interaction.customId.startsWith("waitlist:join:")
+    ) {
+
+      const mode = interaction.customId.split(":")[2];
+
+      if (!MODE_KEYS.includes(mode)) return;
+
+      const db = getDB();
+
+      db.waitlists ??= {};
+
+      for (const key of MODE_KEYS) {
+        db.waitlists[key] ??= [];
+      }
+
+      db.cooldowns ??= {};
+
+      const cooldown = getCooldown(
+        db,
+        interaction.user.id,
+        mode
+      );
+
+      if (cooldown > Date.now()) {
+
+        const remaining = cooldown - Date.now();
+
+        const days = Math.ceil(
+          remaining / (1000 * 60 * 60 * 24)
+        );
+
+        await interaction.reply({
+          content: `⏳ Tienes cooldown en **${modeInfo(mode).name}** durante aproximadamente **${days} día(s)**.`,
+          ephemeral: true
+        });
 
         return;
       }
 
-      if (interaction.isButton()) {
-        const [action, value] =
-          interaction.customId.split(":");
+      if (db.waitlists[mode].includes(interaction.user.id)) {
 
-        if (action === "join" || action === "leave") {
-          const db = getDB();
-          const q = db.waitlists[value];
+        await interaction.reply({
+          content: "❌ Ya estás en esta waitlist.",
+          ephemeral: true
+        });
 
-          if (!q) {
-            return interaction.reply({
-              content: "Modalidad inválida.",
-              ephemeral: true
-            });
-          }
-
-          if (action === "join") {
-            const cooldown =
-              db.cooldowns[
-                `${interaction.user.id}:${value}`
-              ] || 0;
-
-            if (Date.now() < cooldown) {
-              return interaction.reply({
-                content:
-                  `⏱️ Tienes cooldown en **${modeInfo(value).name}**.`,
-                ephemeral: true
-              });
-            }
-
-            if (q.includes(interaction.user.id)) {
-              return interaction.reply({
-                content:
-                  "Ya estás en esta waitlist.",
-                ephemeral: true
-              });
-            }
-
-            q.push(interaction.user.id);
-
-            saveDB(db);
-
-            await refreshWaitlist(
-              interaction.guild,
-              value
-            );
-
-            return interaction.reply({
-              content:
-                `✅ Entraste a la waitlist de **${modeInfo(value).name}** en la posición **${q.length}**.`,
-              ephemeral: true
-            });
-          } else {
-            const i = q.indexOf(
-              interaction.user.id
-            );
-
-            if (i === -1) {
-              return interaction.reply({
-                content:
-                  "No estás en esta waitlist.",
-                ephemeral: true
-              });
-            }
-
-            q.splice(i, 1);
-
-            saveDB(db);
-
-            await refreshWaitlist(
-              interaction.guild,
-              value
-            );
-
-            return interaction.reply({
-              content:
-                "✅ Saliste de la waitlist.",
-              ephemeral: true
-            });
-          }
-        }
-
-        if (action === "queue") {
-          const db = getDB();
-          const q = db.waitlists[value] || [];
-
-          return interaction.reply({
-            content: q.length
-              ? q
-                  .map(
-                    (id, i) =>
-                      `${i + 1}. <@${id}>`
-                  )
-                  .join("\n")
-              : "La waitlist está vacía.",
-            ephemeral: true
-          });
-        }
-
-        if (action === "support") {
-          await interaction.deferReply({
-            ephemeral: true
-          });
-
-          const ch = await createTicket(
-            interaction,
-            value === "high"
-              ? "high"
-              : "support"
-          );
-
-          return interaction.editReply(
-            `🎫 Ticket creado: ${ch}`
-          );
-        }
-
-        if (
-          action === "ticket" &&
-          value === "close"
-        ) {
-          if (
-            !interaction.member.permissions.has(
-              PermissionFlagsBits.ManageChannels
-            )
-          ) {
-            return interaction.reply({
-              content:
-                "Solo staff puede cerrar tickets.",
-              ephemeral: true
-            });
-          }
-
-          await interaction.reply(
-            "🔒 Ticket cerrado."
-          );
-
-          setTimeout(() => {
-            interaction.channel
-              .delete()
-              .catch(() => {});
-          }, 3000);
-
-          return;
-        }
+        return;
       }
 
-      if (interaction.isModalSubmit()) {
-        if (
-          interaction.customId.startsWith("apply:")
-        ) {
-          const type =
-            interaction.customId.split(":")[1];
+      db.waitlists[mode].push(interaction.user.id);
 
-          const db = getDB();
+      saveDB(db);
 
-          const data = {
-            type,
-            userId: interaction.user.id,
-            submittedAt: Date.now()
-          };
+      await interaction.reply({
+        content: `✅ Entraste a la waitlist de **${modeInfo(mode).name}**.`,
+        ephemeral: true
+      });
 
-          for (const id of [
-            "age",
-            "ign",
-            "region",
-            "experience",
-            "why"
-          ]) {
-            if (
-              interaction.fields.fields.has(id)
-            ) {
-              data[id] =
-                interaction.fields.getTextInputValue(
-                  id
-                );
-            }
-          }
+      return;
+    }
 
-          db.applications.push(data);
+    /* =========================
+       LEAVE WAITLIST
+    ========================= */
 
-          saveDB(db);
+    if (
+      interaction.isButton() &&
+      interaction.customId.startsWith("waitlist:leave:")
+    ) {
 
-          const config = getConfig();
+      const mode = interaction.customId.split(":")[2];
 
-          const ch =
-            config.channels.applications
-              ? interaction.guild.channels.cache.get(
-                  config.channels.applications
-                )
-              : null;
+      if (!MODE_KEYS.includes(mode)) return;
 
-          if (ch) {
-            await ch.send({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor(0x2f8cff)
-                  .setTitle(
-                    "📋 NEW APPLICATION"
-                  )
-                  .setDescription(
-                    `**Type:** ${type}\n` +
-                    `**Applicant:** <@${interaction.user.id}>\n\n` +
-                    Object.entries(data)
-                      .filter(
-                        ([k]) =>
-                          ![
-                            "type",
-                            "userId",
-                            "submittedAt"
-                          ].includes(k)
-                      )
-                      .map(
-                        ([k, v]) =>
-                          `**${k}:** ${v}`
-                      )
-                      .join("\n")
-                  )
-              ]
-            });
-          }
+      const db = getDB();
 
-          return interaction.reply({
-            content:
-              "✅ Application enviada correctamente.",
-            ephemeral: true
-          });
-        }
+      db.waitlists ??= {};
+      db.waitlists[mode] ??= [];
+
+      db.waitlists[mode] =
+        db.waitlists[mode].filter(
+          id => id !== interaction.user.id
+        );
+
+      saveDB(db);
+
+      await interaction.reply({
+        content: `✅ Saliste de la waitlist de **${modeInfo(mode).name}**.`,
+        ephemeral: true
+      });
+
+      return;
+    }
+
+    /* =========================
+       VIEW QUEUE
+    ========================= */
+
+    if (
+      interaction.isButton() &&
+      interaction.customId.startsWith("waitlist:view:")
+    ) {
+
+      const mode = interaction.customId.split(":")[2];
+
+      if (!MODE_KEYS.includes(mode)) return;
+
+      const db = getDB();
+
+      const queue =
+        db.waitlists?.[mode] ?? [];
+
+      if (!queue.length) {
+
+        await interaction.reply({
+          content: "📭 La waitlist está vacía.",
+          ephemeral: true
+        });
+
+        return;
       }
-    } catch (e) {
-      console.error(e);
 
-      if (
-        interaction.replied ||
-        interaction.deferred
-      ) {
-        interaction
-          .followUp({
-            content:
-              "❌ Ocurrió un error.",
-            ephemeral: true
-          })
-          .catch(() => {});
-      } else {
-        interaction
-          .reply({
-            content:
-              "❌ Ocurrió un error.",
-            ephemeral: true
-          })
-          .catch(() => {});
+      const list = queue
+        .map((id, index) =>
+          `${index + 1}. <@${id}>`
+        )
+        .join("\n");
+
+      await interaction.reply({
+        content:
+          `### ${modeInfo(mode).emoji} ${modeInfo(mode).name} Waitlist\n\n${list}`,
+        ephemeral: true
+      });
+
+      return;
+    }
+
+    /* =========================
+       CLOSE TICKET
+    ========================= */
+
+    if (
+      interaction.isButton() &&
+      interaction.customId === "ticket:close"
+    ) {
+
+      const db = getDB();
+
+      const ticket =
+        db.tickets?.find(
+          t => t.channelId === interaction.channel.id
+        );
+
+      if (ticket) {
+        ticket.closed = true;
+        ticket.closedAt = Date.now();
       }
+
+      saveDB(db);
+
+      await interaction.reply(
+        "🔒 Ticket cerrado. El cierre **no genera cooldown**."
+      );
+
+      setTimeout(async () => {
+        try {
+          await interaction.channel.delete();
+        } catch {}
+      }, 5000);
+
+      return;
+    }
+
+  } catch (error) {
+
+    console.error("Error en interacción:");
+    console.error(error);
+
+    if (!interaction.replied && !interaction.deferred) {
+
+      await interaction.reply({
+        content: "❌ Ocurrió un error procesando esta acción.",
+        ephemeral: true
+      }).catch(() => {});
+
     }
   }
-);
+});
 
-client.once(
-  Events.ClientReady,
-  () => {
-    console.log(
-      `☀️ Summer Tier List online como ${client.user.tag}`
-    );
-  }
-);
+/* =========================
+   LOGIN
+========================= */
 
-client.login(process.env.TOKEN);
+const TOKEN =
+  process.env.DISCORD_TOKEN ||
+  process.env.TOKEN;
 
-module.exports = {
-  getDB,
-  saveDB,
-  getConfig,
-  saveConfig,
-  modeInfo,
-  MODES,
-  TIERS,
-  setupGuild,
-  refreshWaitlist,
-  refreshAllWaitlists,
-  showApplicationModal
-};
+if (!TOKEN) {
+  console.error("❌ Falta DISCORD_TOKEN en las variables de entorno.");
+  process.exit(1);
+}
+
+client.login(TOKEN);
