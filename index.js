@@ -38,7 +38,6 @@ client.commands = new Collection();
 /* =========================
    COMANDOS
 ========================= */
-
 const commandFiles = [
   "ping.js",
   "profile.js",
@@ -48,7 +47,9 @@ const commandFiles = [
   "setup.js",
   "setupwaitlist.js",
   "support.js",
-  "highresults.js"
+  "highresults.js",
+  "reset.js",
+  "staffsetup.js"
 ];
 
 for (const file of commandFiles) {
