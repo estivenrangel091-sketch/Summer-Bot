@@ -1320,6 +1320,39 @@ const commands = [
     .setDefaultMemberPermissions(
       PermissionFlagsBits.Administrator
     ),
+  new SlashCommandBuilder()
+  .setName("next")
+  .setDescription("Abre un ticket de test para el siguiente jugador de la waitlist.")
+  .addStringOption(option =>
+    option
+      .setName("modalidad")
+      .setDescription("Modalidad del test")
+      .setRequired(true)
+      .addChoices(
+        { name: "🟠 NetPot", value: "netpot" },
+        { name: "🧪 UHC", value: "uhc" },
+        { name: "⚔️ Sword", value: "sword" },
+        { name: "📦 BoxPvP", value: "boxpvp" },
+        { name: "💎 CrystalPvP", value: "crystalpvp" }
+      )
+  ),
+
+new SlashCommandBuilder()
+  .setName("skip")
+  .setDescription("Saca al siguiente jugador de la waitlist.")
+  .addStringOption(option =>
+    option
+      .setName("modalidad")
+      .setDescription("Modalidad")
+      .setRequired(true)
+      .addChoices(
+        { name: "🟠 NetPot", value: "netpot" },
+        { name: "🧪 UHC", value: "uhc" },
+        { name: "⚔️ Sword", value: "sword" },
+        { name: "📦 BoxPvP", value: "boxpvp" },
+        { name: "💎 CrystalPvP", value: "crystalpvp" }
+      )
+  ),
 
   new SlashCommandBuilder()
     .setName("permissionsetup")
@@ -2304,6 +2337,260 @@ if (type === "support") {
       );
     }
 
+        // ==================================================
+    // NEXT
+    // ==================================================
+
+    if (
+      interaction.commandName ===
+      "next"
+    ) {
+      const mode =
+        interaction.options.getString(
+          "modalidad"
+        );
+
+      if (
+        !canManageWaitlist(
+          interaction.member
+        )
+      ) {
+        return interaction.reply({
+          content:
+            "❌ No tienes permiso para administrar waitlists.",
+          ephemeral: true
+        });
+      }
+
+      if (
+        !db.waitlists[mode] ||
+        db.waitlists[mode].length === 0
+      ) {
+        return interaction.reply({
+          content:
+            `📋 La waitlist de **${MODES[mode].name}** está vacía.`,
+          ephemeral: true
+        });
+      }
+
+      const playerId =
+        db.waitlists[mode][0];
+
+      const player =
+        await interaction.guild.members
+          .fetch(playerId)
+          .catch(() => null);
+
+      if (!player) {
+        db.waitlists[mode].shift();
+
+        saveDB();
+
+        await refreshWaitlist(
+          interaction.guild,
+          mode
+        );
+
+        return interaction.reply({
+          content:
+            "⚠️ El primer jugador ya no está en el servidor y fue eliminado de la waitlist.",
+          ephemeral: true
+        });
+      }
+
+      const category =
+        getChannel(
+          interaction.guild,
+          "🎫 TICKETS"
+        );
+
+      if (!category) {
+        return interaction.reply({
+          content:
+            "❌ No encontré la categoría 🎫 TICKETS.",
+          ephemeral: true
+        });
+      }
+
+      const existingTicket =
+        interaction.guild.channels.cache.find(
+          channel =>
+            channel.topic ===
+            `ticket-owner:${player.id}`
+        );
+
+      if (existingTicket) {
+        return interaction.reply({
+          content:
+            `❌ ${player} ya tiene un ticket abierto: ${existingTicket}`,
+          ephemeral: true
+        });
+      }
+
+      const ticketName =
+        `test-${mode}-${player.user.username}`
+          .toLowerCase()
+          .replace(/[^a-z0-9-_]/g, "");
+
+      const ticket =
+        await interaction.guild.channels.create({
+          name: ticketName,
+          type: ChannelType.GuildText,
+          parent: category.id,
+          topic:
+            `ticket-owner:${player.id}`,
+
+          permissionOverwrites: [
+            {
+              id:
+                interaction.guild.roles.everyone.id,
+              deny: [
+                PermissionFlagsBits.ViewChannel
+              ]
+            },
+            {
+              id: player.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory
+              ]
+            },
+            {
+              id: interaction.user.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageMessages
+              ]
+            }
+          ]
+        });
+
+      db.waitlists[mode].shift();
+
+      saveDB();
+
+      await refreshWaitlist(
+        interaction.guild,
+        mode
+      );
+
+      const embed =
+        new EmbedBuilder()
+          .setColor(0xf1c40f)
+          .setTitle(
+            `${MODES[mode].emoji} ${MODES[mode].name} TEST`
+          )
+          .setDescription(
+            [
+              `👤 **Player:** ${player}`,
+              `🧪 **Tester:** ${interaction.user}`,
+              "",
+              "El test puede comenzar.",
+              "",
+              `🎮 **Modalidad:** ${MODES[mode].name}`,
+              `👤 **Jugador:** ${player.user.username}`,
+              `🧪 **Tester:** ${interaction.user.username}`,
+              "",
+              "Cuando el test termine, utiliza `/result` para registrar el resultado."
+            ].join("\n")
+          )
+          .setFooter({
+            text:
+              "Summer Tier List • Official Test"
+          })
+          .setTimestamp();
+
+      const row =
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(
+              "close_ticket"
+            )
+            .setLabel("Cerrar Ticket")
+            .setStyle(
+              ButtonStyle.Danger
+            )
+            .setEmoji("🔒")
+        );
+
+      await ticket.send({
+        content:
+          `${player} ${interaction.user}`,
+        embeds: [embed],
+        components: [row]
+      });
+
+      return interaction.reply({
+        content:
+          `✅ Ticket de test creado para ${player}: ${ticket}`,
+        ephemeral: true
+      });
+    }
+
+    // ==================================================
+    // SKIP
+    // ==================================================
+
+    if (
+      interaction.commandName ===
+      "skip"
+    ) {
+      const mode =
+        interaction.options.getString(
+          "modalidad"
+        );
+
+      if (
+        !canManageWaitlist(
+          interaction.member
+        )
+      ) {
+        return interaction.reply({
+          content:
+            "❌ No tienes permiso para administrar waitlists.",
+          ephemeral: true
+        });
+      }
+
+      if (
+        !db.waitlists[mode] ||
+        db.waitlists[mode].length === 0
+      ) {
+        return interaction.reply({
+          content:
+            `📋 La waitlist de **${MODES[mode].name}** está vacía.`,
+          ephemeral: true
+        });
+      }
+
+      const playerId =
+        db.waitlists[mode][0];
+
+      const player =
+        await interaction.guild.members
+          .fetch(playerId)
+          .catch(() => null);
+
+      db.waitlists[mode].shift();
+
+      saveDB();
+
+      await refreshWaitlist(
+        interaction.guild,
+        mode
+      );
+
+      return interaction.reply({
+        content: player
+          ? `⏭️ ${player} fue **saltado** en la waitlist de **${MODES[mode].name}**.`
+          : `⏭️ El primer jugador fue eliminado de la waitlist de **${MODES[mode].name}**.`,
+        ephemeral: true
+      });
+    }
+    
     // ==================================================
     // RESET
     // ==================================================
