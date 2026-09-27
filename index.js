@@ -1807,6 +1807,11 @@ if (type === "support") {
 ) {
   ticketName =
     `alliance-${interaction.user.username}`;
+} else if (
+  type === "alliance"
+) {
+  ticketName =
+    `alliance-${interaction.user.username}`;
 }
         const category = getChannel(
           interaction.guild,
