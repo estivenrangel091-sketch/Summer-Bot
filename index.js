@@ -1116,7 +1116,7 @@ async function sendTicketPanel(channel) {
         value: "staff_application",
         emoji: "📝"
       },
-      {
+      
         {
   label: "High Test",
   description: "Solicitar High Test",
