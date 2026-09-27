@@ -1782,7 +1782,7 @@ client.on("interactionCreate", async interaction => {
           });
         }
 
-        let ticketName;
+       let ticketName;
 
 if (type === "support") {
   ticketName =
@@ -1802,11 +1802,6 @@ if (type === "support") {
 ) {
   ticketName =
     `high-test-${interaction.user.username}`;
-} else if (
-  type === "alliance"
-) {
-  ticketName =
-    `alliance-${interaction.user.username}`;
 } else if (
   type === "alliance"
 ) {
