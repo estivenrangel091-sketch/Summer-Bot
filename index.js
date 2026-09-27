@@ -2946,7 +2946,7 @@ client.once("ready", async () => {
 // ======================================================
 // LOGIN
 // ======================================================
-client.on(Events.GuildMemberAdd, async member => {
+client.on("guildMemberAdd", async member => {
   try {
     const memberRole = member.guild.roles.cache.find(
       role => role.name === "Member"
