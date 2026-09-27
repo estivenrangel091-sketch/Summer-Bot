@@ -1582,7 +1582,11 @@ async function registerCommands() {
     }
   );
 
-  console.log("✅ Slash commands registrados.");
+ console.log(
+  "✅ Slash commands registrados:",
+  commands.map(command => command.name)
+);
+  
 }
 
 // ======================================================
