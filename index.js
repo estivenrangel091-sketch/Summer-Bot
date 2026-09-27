@@ -1797,11 +1797,17 @@ if (type === "support") {
 ) {
   ticketName =
     `staff-${interaction.user.username}`;
-} else {
+} else if (
+  type === "high_test"
+) {
   ticketName =
     `high-test-${interaction.user.username}`;
+} else if (
+  type === "alliance"
+) {
+  ticketName =
+    `alliance-${interaction.user.username}`;
 }
-
         const category = getChannel(
           interaction.guild,
           "🎫 TICKETS"
