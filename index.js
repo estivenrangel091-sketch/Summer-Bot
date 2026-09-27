@@ -1570,25 +1570,27 @@ async function registerCommands() {
     version: "10"
   }).setToken(TOKEN);
 
+  const commandData = commands.map(command =>
+    command.toJSON()
+  );
+
+  console.log(
+    "📋 Comandos que se van a registrar:",
+    commandData.map(command => command.name)
+  );
+
   await rest.put(
     Routes.applicationGuildCommands(
       CLIENT_ID,
       GUILD_ID
     ),
     {
-      body: commands.map(command =>
-        command.toJSON()
-      )
+      body: commandData
     }
   );
 
- console.log(
-  "✅ Slash commands registrados:",
-  commands.map(command => command.name)
-);
-  
+  console.log("✅ Slash commands registrados.");
 }
-
 // ======================================================
 // COMMAND PERMISSION CHECK
 // ======================================================
