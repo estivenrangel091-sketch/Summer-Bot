@@ -1117,11 +1117,18 @@ async function sendTicketPanel(channel) {
         emoji: "📝"
       },
       {
-        label: "High Test",
-        description: "Solicitar High Test",
-        value: "high_test",
-        emoji: "🏆"
-      }
+        {
+  label: "High Test",
+  description: "Solicitar High Test",
+  value: "high_test",
+  emoji: "🏆"
+},
+{
+  label: "Alliance Application",
+  description: "Solicitar una alianza con Summer Tier List",
+  value: "alliance",
+  emoji: "🤝"
+}
     );
 
   const row = new ActionRowBuilder().addComponents(
@@ -1777,23 +1784,23 @@ client.on("interactionCreate", async interaction => {
 
         let ticketName;
 
-        if (type === "support") {
-          ticketName =
-            `support-${interaction.user.username}`;
-        } else if (
-          type === "tester_application"
-        ) {
-          ticketName =
-            `tester-${interaction.user.username}`;
-        } else if (
-          type === "staff_application"
-        ) {
-          ticketName =
-            `staff-${interaction.user.username}`;
-        } else {
-          ticketName =
-            `high-test-${interaction.user.username}`;
-        }
+if (type === "support") {
+  ticketName =
+    `support-${interaction.user.username}`;
+} else if (
+  type === "tester_application"
+) {
+  ticketName =
+    `tester-${interaction.user.username}`;
+} else if (
+  type === "staff_application"
+) {
+  ticketName =
+    `staff-${interaction.user.username}`;
+} else {
+  ticketName =
+    `high-test-${interaction.user.username}`;
+}
 
         const category = getChannel(
           interaction.guild,
