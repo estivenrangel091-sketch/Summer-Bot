@@ -1065,31 +1065,34 @@ async function refreshWaitlist(guild, mode) {
 async function sendTicketPanel(channel) {
   if (!channel) return;
 
-  const embed = new EmbedBuilder()
-    .setColor(0x3498db)
-    .setTitle("🎫 Summer Support")
-    .setDescription(
-      [
-        "Selecciona el tipo de ticket que necesitas.",
-        "",
-        "🎫 **Support**",
-        "Ayuda general.",
-        "",
-        "🧪 **Tester Application**",
-        "Aplicación para Tester.",
-        "",
-        "📝 **Staff Application**",
-        "Aplicación para Staff.",
-        "",
-        "🏆 **High Test**",
-        "Solicitar un High Test.",
-        "",
-        "El High Test **no se solicita desde una waitlist**."
-      ].join("\n")
-    )
-    .setFooter({
-      text: "Summer Tier List"
-    });
+ const embed = new EmbedBuilder()
+  .setColor(0x3498db)
+  .setTitle("🎫 Summer Support")
+  .setDescription(
+    [
+      "Selecciona el tipo de ticket que necesitas.",
+      "",
+      "🎫 **Support**",
+      "Ayuda general.",
+      "",
+      "🧪 **Tester Application**",
+      "Aplicación para Tester.",
+      "",
+      "📝 **Staff Application**",
+      "Aplicación para Staff.",
+      "",
+      "🏆 **High Test**",
+      "Solicitar un High Test.",
+      "",
+      "🤝 **Alliance Application**",
+      "Solicitar una alianza con Summer Tier List.",
+      "",
+      "El High Test **no se solicita desde una waitlist**."
+    ].join("\n")
+  )
+  .setFooter({
+    text: "Summer Tier List"
+  });
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId("ticket_type")
