@@ -3224,6 +3224,7 @@ client.once("ready", async () => {
   );
 
   try {
+    console.log("🔥 ESTOY EJECUTANDO EL REGISTER COMMANDS");
     await registerCommands();
     console.log(
       "✅ Comandos registrados correctamente."
