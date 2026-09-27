@@ -2946,5 +2946,28 @@ client.once("ready", async () => {
 // ======================================================
 // LOGIN
 // ======================================================
+client.on(Events.GuildMemberAdd, async member => {
+  try {
+    const memberRole = member.guild.roles.cache.find(
+      role => role.name === "Member"
+    );
+
+    if (!memberRole) {
+      console.log("❌ No se encontró el rol Member.");
+      return;
+    }
+
+    await member.roles.add(memberRole);
+
+    console.log(
+      `✅ ${member.user.tag} recibió automáticamente el rol Member.`
+    );
+  } catch (error) {
+    console.error(
+      "❌ Error asignando el rol Member:",
+      error.message
+    );
+  }
+});
 
 client.login(TOKEN);
