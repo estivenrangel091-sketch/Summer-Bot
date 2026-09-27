@@ -1782,7 +1782,7 @@ client.on("interactionCreate", async interaction => {
           });
         }
 
-       let ticketName;
+      let ticketName;
 
 if (type === "support") {
   ticketName =
